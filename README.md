@@ -68,12 +68,13 @@ Este repositório **não copia** as 24 skills-folha do Agent Skills. Instale os 
 runtime:
 
 ```bash
-npx skills add addyosmani/agent-skills
-npx skills add gutocarollo/guto-skills
+npx skills add addyosmani/agent-skills --skill '*'
+npx skills add gutocarollo/guto-skills --skill '*'
 ```
 
-Instale o pacote completo, não apenas uma skill isolada: as quatro orchestrators compartilham os
-contratos em `references/`.
+Cada `guto-*` é autocontida para funcionar também em instaladores que copiam somente o diretório
+da skill. Os contratos em `references/` documentam o pacote completo, mas não são dependências de
+runtime das skills instaladas isoladamente.
 
 ### Claude Code
 

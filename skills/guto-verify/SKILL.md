@@ -13,11 +13,17 @@ Converter afirmações de conclusão em evidências atuais e reproduzíveis. Est
 Opera em modo read-only por padrão. Quando encontra falha, produz um pedido de correção para
 `guto-build`; não corrige silenciosamente e não inicia `guto-review` automaticamente.
 
-Leia antes de começar:
+## Contrato operacional embutido
 
-- `../../references/routing-contract.md`
-- `../../references/lifecycle-contract.md`
-- `../../references/artifact-contract.md`
+- Classifique cada skill-filha como `USE`, `REUSE`, `SKIP` ou `BLOCKED`; leia integralmente apenas
+  as marcadas `USE`.
+- `USE` significa trigger presente e trabalho ainda não feito; `REUSE`, resultado vigente;
+  `SKIP`, trigger ausente; `BLOCKED`, capacidade necessária sem acesso ou dado indispensável.
+- Use os artefatos canônicos do projeto. Sem outra convenção, leia e atualize `tasks/plan.md`,
+  `tasks/todo.md` e `tasks/state.md`.
+- A skill é autocontida: arquivos em `references/` na raiz são documentação complementar, não
+  pré-condição de execução.
+- Nenhuma transição de fase é automática. `VERIFIED` devolve o controle ao usuário.
 
 ## Pré-condição
 

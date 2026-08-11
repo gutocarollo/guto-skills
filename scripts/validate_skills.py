@@ -19,29 +19,6 @@ REQUIRED_SKILLS = {
     "clarification-plan",
 }
 
-REQUIRED_SHARED_REFERENCES = {
-    "guto-plan": {
-        "../../references/routing-contract.md",
-        "../../references/lifecycle-contract.md",
-        "../../references/artifact-contract.md",
-    },
-    "guto-build": {
-        "../../references/routing-contract.md",
-        "../../references/lifecycle-contract.md",
-        "../../references/artifact-contract.md",
-    },
-    "guto-verify": {
-        "../../references/routing-contract.md",
-        "../../references/lifecycle-contract.md",
-        "../../references/artifact-contract.md",
-    },
-    "guto-review": {
-        "../../references/routing-contract.md",
-        "../../references/lifecycle-contract.md",
-        "../../references/artifact-contract.md",
-    },
-}
-
 COUNCIL_ONLY_TOKENS = {
     "edge_id",
     "CRITICAL_BLOCK",
@@ -152,19 +129,10 @@ def validate_skills(validation: Validation) -> None:
                         f"{skill_file.relative_to(ROOT)}: Council-only token {token!r} must not leak into clean skills"
                     )
 
-        for reference in REQUIRED_SHARED_REFERENCES.get(name, set()):
-            validation.check(
-                reference in text,
-                f"{skill_file.relative_to(ROOT)}: missing shared reference {reference}",
-            )
-
-        for match in re.finditer(r"\.\./\.\./references/[A-Za-z0-9._/-]+\.md", text):
-            reference = match.group(0)
-            resolved = (directory / reference).resolve()
-            validation.check(
-                resolved.is_file(),
-                f"{skill_file.relative_to(ROOT)}: broken reference {reference}",
-            )
+        validation.check(
+            "../../references/" not in text,
+            f"{skill_file.relative_to(ROOT)}: skills must be self-contained; root references are not installed by every CLI",
+        )
 
 
 def validate_manifests(validation: Validation) -> None:

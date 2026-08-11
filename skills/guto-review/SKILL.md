@@ -11,11 +11,17 @@ Responder **“esta mudança verificada está pronta para merge?”**. Review n�
 funcional e não modifica o produto. Ele avalia correção, clareza, arquitetura, segurança, performance
 e aderência ao plano, com profundidade proporcional.
 
-Leia antes de começar:
+## Contrato operacional embutido
 
-- `../../references/routing-contract.md`
-- `../../references/lifecycle-contract.md`
-- `../../references/artifact-contract.md`
+- Classifique cada skill-filha como `USE`, `REUSE`, `SKIP` ou `BLOCKED`; leia integralmente apenas
+  as marcadas `USE`.
+- `USE` significa trigger presente e trabalho ainda não feito; `REUSE`, resultado vigente;
+  `SKIP`, trigger ausente; `BLOCKED`, capacidade necessária sem acesso ou dado indispensável.
+- Use os artefatos canônicos do projeto. Sem outra convenção, leia e atualize `tasks/plan.md`,
+  `tasks/todo.md` e `tasks/state.md`.
+- A skill é autocontida: arquivos em `references/` na raiz são documentação complementar, não
+  pré-condição de execução.
+- Nenhuma transição de fase é automática. `MERGE_READY` não autoriza commit, push ou merge.
 
 ## Pré-condição
 
