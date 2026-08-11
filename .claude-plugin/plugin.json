@@ -1,0 +1,12 @@
+{
+  "name": "guto-skills",
+  "version": "0.1.0",
+  "description": "Four-stage, human-audited orchestration for planning, building, verifying, and reviewing with conditional Agent Skills routing.",
+  "author": {
+    "name": "Augusto Carollo",
+    "url": "https://github.com/gutocarollo"
+  },
+  "homepage": "https://github.com/gutocarollo/guto-skills",
+  "repository": "https://github.com/gutocarollo/guto-skills",
+  "skills": "./skills"
+}

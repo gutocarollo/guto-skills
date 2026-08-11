@@ -1,0 +1,30 @@
+{
+  "name": "guto-skills",
+  "version": "0.1.0",
+  "description": "Human-audited orchestration skills for plan, build, verify, and review with conditional Agent Skills routing.",
+  "author": {
+    "name": "Augusto Carollo",
+    "url": "https://github.com/gutocarollo"
+  },
+  "homepage": "https://github.com/gutocarollo/guto-skills",
+  "repository": "https://github.com/gutocarollo/guto-skills",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Guto Skills",
+    "shortDescription": "Plan, build, verify, and review without a rigid all-in-one council.",
+    "longDescription": "Guto Skills provides four explicit orchestration stages. Each stage selects only the applicable Agent Skills, persists the approved plan and checklist, and stops for human audit before the next stage.",
+    "developerName": "Augusto Carollo",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use guto-plan to consolidate this task before implementation",
+      "Use guto-build to execute the approved plan and stop before verification",
+      "Use guto-verify to prove the acceptance criteria",
+      "Use guto-review to decide whether the verified change is merge-ready"
+    ]
+  }
+}

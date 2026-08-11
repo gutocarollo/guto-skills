@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "guto-skills",
+  "description": "Conditional orchestration skills with explicit human checkpoints between plan, build, verify, and review.",
+  "owner": {
+    "name": "Augusto Carollo",
+    "url": "https://github.com/gutocarollo"
+  },
+  "plugins": [
+    {
+      "name": "guto-skills",
+      "version": "0.1.0",
+      "source": {
+        "source": "github",
+        "repo": "gutocarollo/guto-skills"
+      },
+      "description": "Plan, build, verify, and review using only the Agent Skills that apply to the current work.",
+      "homepage": "https://github.com/gutocarollo/guto-skills",
+      "keywords": [
+        "skills",
+        "agents",
+        "planning",
+        "implementation",
+        "verification",
+        "review"
+      ]
+    }
+  ]
+}
