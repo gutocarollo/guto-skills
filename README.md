@@ -168,7 +168,8 @@ Valide manifests, frontmatter, referências relativas, nomes e ausência de cont
 python3 scripts/validate_skills.py
 ```
 
-A mesma validação roda no GitHub Actions.
+O repositório não ativa CI hospedado por padrão. Conecte esse comando ao runner local ou ao CI já
+usado pelo projeto quando fizer sentido.
 
 ## Fontes e procedência
 
