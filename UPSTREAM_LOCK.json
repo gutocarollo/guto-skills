@@ -1,0 +1,90 @@
+{
+  "files": {
+    "references/definition-of-done.md": {
+      "mode": "100644",
+      "sha": "35e39f9e15f6dd0ff4725a6e5cbce7f2aa69064a"
+    },
+    "references/performance-checklist.md": {
+      "mode": "100644",
+      "sha": "86a41496bf9c4c58b60be30fdf137b8bc813fad8"
+    },
+    "references/security-checklist.md": {
+      "mode": "100644",
+      "sha": "0f656479b05812383abfd8d11ab72a6d7dd47e14"
+    },
+    "skills/browser-testing-with-devtools/SKILL.md": {
+      "mode": "100644",
+      "sha": "9864d2724e273e1164d62ab10b73590ae00fd6a8"
+    },
+    "skills/code-review-and-quality/SKILL.md": {
+      "mode": "100644",
+      "sha": "7dfa56362fa65fff450ee5aa02393b85b9c26d85"
+    },
+    "skills/code-simplification/SKILL.md": {
+      "mode": "100644",
+      "sha": "239b2848489511de30d9e63b0bd183adc4b01347"
+    },
+    "skills/context-engineering/SKILL.md": {
+      "mode": "100644",
+      "sha": "be991103fe2b13f7e5f6f5da9d3c6029ad30ac64"
+    },
+    "skills/debugging-and-error-recovery/SKILL.md": {
+      "mode": "100644",
+      "sha": "03775802b244cddf2f58f6c54039f6e6ee8702f2"
+    },
+    "skills/idea-refine/SKILL.md": {
+      "mode": "100644",
+      "sha": "38955e8943f2ea68c041f10ef1902d94bdfb1cb9"
+    },
+    "skills/idea-refine/examples.md": {
+      "mode": "100644",
+      "sha": "a797d22c69cb248d718713633f42d4ee7a4d01d7"
+    },
+    "skills/idea-refine/frameworks.md": {
+      "mode": "100644",
+      "sha": "0e7fc8fe203bd6aabfba0f79cb6fa98c76d92e28"
+    },
+    "skills/idea-refine/refinement-criteria.md": {
+      "mode": "100644",
+      "sha": "53e79c725b7aa0a4a39389056bd71b1689aa8740"
+    },
+    "skills/idea-refine/scripts/idea-refine.sh": {
+      "mode": "100755",
+      "sha": "a53cb5a9dc00252003a04d485132d58a5260e9b6"
+    },
+    "skills/incremental-implementation/SKILL.md": {
+      "mode": "100644",
+      "sha": "6df12f9a878c80305c42bcdbe8a43a10d2e0c933"
+    },
+    "skills/interview-me/SKILL.md": {
+      "mode": "100644",
+      "sha": "de5e3aff0c497e2d474e329cde447678632e082b"
+    },
+    "skills/performance-optimization/SKILL.md": {
+      "mode": "100644",
+      "sha": "a4e968e57ec1f57acdaef83d1d00f7201cadff19"
+    },
+    "skills/planning-and-task-breakdown/SKILL.md": {
+      "mode": "100644",
+      "sha": "d4fb82f624fe082441db4c2f3734d46882907b65"
+    },
+    "skills/security-and-hardening/SKILL.md": {
+      "mode": "100644",
+      "sha": "98b96c7bc5bf1bef80304762117f6cba48fcac16"
+    },
+    "skills/source-driven-development/SKILL.md": {
+      "mode": "100644",
+      "sha": "d1f599a9fe8eb77d4af7dc2f45404c2f6363e441"
+    },
+    "skills/spec-driven-development/SKILL.md": {
+      "mode": "100644",
+      "sha": "569d22321469770385b1ff89bf69f498f2202bc6"
+    }
+  },
+  "schema_version": 1,
+  "source": {
+    "commit": "7676817c12a1317454ae3898a0c5c1eacf5dd3d5",
+    "license": "MIT",
+    "repository": "https://github.com/addyosmani/agent-skills"
+  }
+}

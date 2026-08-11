@@ -1,46 +1,111 @@
 # Guto Skills
 
-Quatro skills de orquestração para desenvolvimento assistido por IA, com seleção condicional das
-skills do [`addyosmani/agent-skills`](https://github.com/addyosmani/agent-skills) e checkpoints
-humanos entre as etapas.
+Four phase-scoped orchestration skills built on a deliberately small, vendored subset of [`addyosmani/agent-skills`](https://github.com/addyosmani/agent-skills).
 
-O objetivo é preservar contexto, plano diretor e evidências sem transformar toda tarefa em um
-Council, máquina de estados pesada ou sequência obrigatória de todas as skills disponíveis.
+The package keeps a master plan, refreshes context at every phase, selects only the skills explicitly assigned to that phase, and stops for human audit before advancing.
 
-## Arquitetura
+## Lifecycle
 
 ```text
-PLANEJAMENTO                 EXECUÇÃO                  GARANTIA
-┌───────────┐              ┌───────────┐       ┌────────────┐  ┌────────────┐
-│ guto-plan │ ── humano ─▶ │guto-build │ ───▶  │guto-verify │─▶│guto-review │
-└───────────┘              └───────────┘       └────────────┘  └────────────┘
+guto-plan
+    │  PLAN_READY + human approval
+    ▼
+guto-build
+    │  BUILD_READY_FOR_VERIFY + human audit
+    ▼
+guto-verify
+    │  VERIFIED + human audit
+    ▼
+guto-review
+    │
+    └── MERGE_READY still requires a human merge decision
 ```
 
-| Skill | Responsabilidade | Para onde pode retornar |
-|---|---|---|
-| `guto-plan` | contexto, intenção, refinamento, decisões, spec e task breakdown | permanece no Planning até `PLAN_READY` |
-| `guto-build` | executar a versão aprovada em incrementos com checks locais | `guto-plan` em drift material |
-| `guto-verify` | provar critérios de aceite com testes e runtime | `guto-build` quando uma prova falha |
-| `guto-review` | gate final de qualidade, simplificação, segurança e performance | `guto-build` ou `guto-plan` conforme o finding |
+No phase invokes the next phase automatically.
 
-As transições não são automáticas. Cada skill para, entrega o artefato e aguarda auditoria humana.
-`MERGE_READY` também não autoriza merge.
+## Exact Composition
 
-## Princípios
+### `guto-plan`
 
-- **Skill aplicável, não skill disponível.** Cada skill-filha recebe `USE`, `REUSE`, `SKIP` ou
-  `BLOCKED`.
-- **Contexto pertence ao Planning.** Build faz apenas recuperação local e retorna ao Planning se a
-  descoberta mudar objetivo, escopo, arquitetura, contrato ou aceite.
-- **Checks locais não substituem Verify.** Build evita acumular erros; Verify prova o conjunto.
-- **Verify não é Review.** Funcionamento e qualidade para merge são julgamentos separados.
-- **Sem gates herdados do Orion's Belt.** Não há `edge_id`, scoring, ledger, hooks obrigatórios,
-  commit por slice ou review adversarial universal.
-- **Sem execução automática de todas as skills.** Frontend, browser, security e performance só
-  entram quando a tarefa possui seus triggers.
-- **Sem transição automática entre domínios.** O usuário controla quando avançar.
+Always:
 
-## Skills incluídas
+- `context-engineering`
+- `planning-and-task-breakdown` before `PLAN_READY`
+
+Conditionally:
+
+- `interview-me`
+- `idea-refine`
+- `clarification-plan`
+- `spec-driven-development`
+
+### `guto-build`
+
+Always, in this order:
+
+1. `context-engineering`
+2. `planning-and-task-breakdown`
+3. `source-driven-development`
+4. `incremental-implementation`
+
+### `guto-verify`
+
+Always:
+
+- `context-engineering`
+
+Conditionally:
+
+- `browser-testing-with-devtools` for browser claims
+- `debugging-and-error-recovery` after a failed or unexpected verification result
+
+Project-native test, build, typecheck, lint, query, and runtime commands are executed as evidence; no generic testing skill is added.
+
+### `guto-review`
+
+Always:
+
+- a fresh independent `context-engineering` pass
+- `code-review-and-quality`
+
+Conditionally:
+
+- `code-simplification`
+- `security-and-hardening`
+- `performance-optimization`
+
+The review context pass explicitly searches for relevant code, contracts, consumers, tests, and architecture that Planning or Build may have omitted.
+
+## Why Context Engineering Is Mandatory
+
+Project context is larger than the useful attention budget. Every phase therefore starts by loading and executing the local `context-engineering` skill.
+
+The goal is not to inject the entire repository. The goal is to route the agent to the smallest cohesive set of current code, documentation, tests, contracts, runtime evidence, and project decisions needed for the phase.
+
+A previous context pack is input, never a substitute:
+
+- Planning needs context to produce the right plan.
+- Build needs refreshed context because code and dependencies may have changed.
+- Verify needs context to map claims to real proof surfaces.
+- Review needs an independent context reconstruction to find omitted impact and stale assumptions.
+
+## Vendored Skills
+
+The selected Agent Skills are stored directly under `skills/`. The orchestrators resolve local sibling files such as:
+
+```text
+skills/guto-build/SKILL.md
+skills/context-engineering/SKILL.md
+skills/planning-and-task-breakdown/SKILL.md
+skills/source-driven-development/SKILL.md
+skills/incremental-implementation/SKILL.md
+```
+
+An orchestrator must read the complete local child `SKILL.md` before invoking it. If the file is absent, the phase returns `BLOCKED`; there is no silent external or remembered fallback.
+
+The vendored snapshot is pinned in [`UPSTREAM_LOCK.json`](UPSTREAM_LOCK.json). See [`NOTICE.md`](NOTICE.md) for attribution and licensing.
+
+## Skills Tree
 
 ```text
 skills/
@@ -48,132 +113,111 @@ skills/
 ├── guto-build/
 ├── guto-verify/
 ├── guto-review/
-└── clarification-plan/
+├── clarification-plan/
+├── context-engineering/
+├── interview-me/
+├── idea-refine/
+├── spec-driven-development/
+├── planning-and-task-breakdown/
+├── source-driven-development/
+├── incremental-implementation/
+├── browser-testing-with-devtools/
+├── debugging-and-error-recovery/
+├── code-review-and-quality/
+├── code-simplification/
+├── security-and-hardening/
+└── performance-optimization/
 ```
 
-`clarification-plan` é uma versão portátil e reduzida da ideia usada no Orion's Belt. Ela mantém:
+No other Agent Skills are included in this repository.
 
-- investigação antes da pergunta;
-- decisão material, não detalhe irrelevante;
-- opções com comportamento e exemplos reais;
-- recomendação explícita;
-- terceira via quando A/B forem insuficientes.
+## Planning Artifacts
 
-Foram removidos contratos específicos do Council, percentuais, scores, hooks, ledgers e grafo de
-execução obrigatório.
+Use the target project's existing planning convention when it has one. Otherwise the fallback is:
 
-## Dependência
+```text
+tasks/
+├── plan.md   # approved, versioned planning contract
+├── todo.md   # checkboxes and evidence-backed progress
+└── state.md  # short anti-drift state for session changes or compaction
+```
 
-Este repositório **não copia** as 24 skills-folha do Agent Skills. Instale os dois pacotes no mesmo
-runtime:
+Material discoveries return to `guto-plan`. Local reversible implementation details remain in `guto-build`.
+
+## Install
+
+### Open Skills CLI
 
 ```bash
-npx skills add addyosmani/agent-skills --skill '*'
 npx skills add gutocarollo/guto-skills --skill '*'
 ```
 
-Cada `guto-*` é autocontida para funcionar também em instaladores que copiam somente o diretório
-da skill. Os contratos em `references/` documentam o pacote completo, mas não são dependências de
-runtime das skills instaladas isoladamente.
+The selected Agent Skills are already vendored. A separate installation of `addyosmani/agent-skills` is not required.
 
 ### Claude Code
 
 ```text
-/plugin marketplace add addyosmani/agent-skills
-/plugin install agent-skills@addy-agent-skills
-
 /plugin marketplace add gutocarollo/guto-skills
 /plugin install guto-skills@guto-skills
 ```
 
-### Codex CLI
+### Codex
 
 ```bash
-codex plugin marketplace add addyosmani/agent-skills
-codex plugin add agent-skills@agent-skills
-
 codex plugin marketplace add gutocarollo/guto-skills
 codex plugin add guto-skills@guto-skills
 ```
 
-## Uso
-
-### 1. Planejar
+## Invoke
 
 ```text
 @guto-plan
-Planeje a feature X. Use o contexto real do repositório, refine comigo as decisões materiais e
-pare quando a versão do plano estiver pronta para minha aprovação.
+Plan this change from the real repository context. Refine material decisions with me and stop at PLAN_READY.
 ```
-
-Saída esperada:
-
-```text
-STATUS: PLAN_READY
-PLAN_VERSION: 1
-OPEN_MATERIAL_DECISIONS: 0
-```
-
-### 2. Executar
-
-Depois de aprovar explicitamente a versão:
 
 ```text
 @guto-build
-Execute a PLAN_VERSION 1. Atualize os checkboxes e pare em BUILD_READY_FOR_VERIFY.
+Implement the explicitly approved PLAN_VERSION. Update evidence-backed checkboxes and stop at BUILD_READY_FOR_VERIFY.
 ```
-
-### 3. Verificar
 
 ```text
 @guto-verify
-Prove todos os critérios de aceite da versão atual. Use browser somente se houver claim de browser.
+Prove the current implementation against every acceptance criterion and stop before Review.
 ```
-
-### 4. Revisar
 
 ```text
 @guto-review
-Revise a mudança verificada para merge. Rode simplificação, segurança e performance somente se os
-triggers existirem.
+Run a fresh context-gap audit and review the verified change for merge readiness.
 ```
 
-## Artefatos persistentes
-
-Quando o projeto não possui convenção própria, as skills usam:
-
-```text
-tasks/
-├── plan.md   # contrato diretor versionado
-├── todo.md   # checklist e checkpoints
-└── state.md  # resumo curto para retomada/anti-drift
-```
-
-A especificação está em [`references/artifact-contract.md`](references/artifact-contract.md).
-
-## O que este pacote não faz
-
-- não instala nem duplica Agent Skills;
-- não executa Council ou subagentes por padrão;
-- não exige grafo de código, MCP, hooks ou banco;
-- não faz commit, push, merge ou deploy sem autorização/política explícita;
-- não promete contexto literalmente completo;
-- não considera toda recomendação de review bloqueante;
-- não substitui as convenções canônicas já existentes no projeto-alvo.
-
-## Desenvolvimento
-
-Valide manifests, frontmatter, referências relativas, nomes e ausência de contratos herdados:
+## Validate
 
 ```bash
 python3 scripts/validate_skills.py
 ```
 
-O repositório não ativa CI hospedado por padrão. Conecte esse comando ao runner local ou ao CI já
-usado pelo projeto quando fizer sentido.
+The validator checks:
 
-## Fontes e procedência
+- the exact skill inventory;
+- the exact child-skill set for each `guto-*` skill;
+- mandatory `context-engineering` in all four phases;
+- local child paths;
+- English custom files;
+- frontmatter and manifest consistency;
+- pinned upstream Git blob hashes;
+- absence of inherited Orion's Belt Council contracts.
 
-Veja [`PROVENANCE.md`](PROVENANCE.md). O desenho usa Agent Skills como dependência, adota a separação
-de checkpoints vista no Superpowers e reescreve de forma limpa apenas os conceitos úteis do
-Orion's Belt.
+Hosted CI is not enabled by default. Run the validator locally or from the target project's existing CI runner.
+
+## Design Boundary
+
+This repository intentionally does not include:
+
+- a Delivery Council;
+- automatic subagent swarms;
+- mandatory code graphs, ledgers, hooks, scores, or graph-edge identifiers;
+- automatic transition between phases;
+- automatic merge, push, or deployment;
+- unrelated Agent Skills outside the exact composition above.
+
+Capabilities from Orion's Belt may be ported later only when they solve a measured problem without turning the normal path into a high-assurance Council.

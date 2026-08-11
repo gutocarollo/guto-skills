@@ -1,247 +1,166 @@
 ---
 name: guto-review
-description: Executa o gate final de qualidade contra plano, diff e evidências verificadas, selecionando code review, simplificação, segurança e performance somente quando seus triggers existem. Use depois de VERIFIED ou antes de merge; opera em read-only, bloqueia apenas achados materiais ancorados em evidência e devolve correções ao Build.
+description: Reviews a verified change for correctness, omitted context, maintainability, security, and performance before merge. Use only after guto-verify has produced current evidence for the approved plan version.
 ---
 
 # Guto Review
 
-## Objetivo
+## Purpose
 
-Responder **“esta mudança verificada está pronta para merge?”**. Review não repete toda a verificação
-funcional e não modifica o produto. Ele avalia correção, clareza, arquitetura, segurança, performance
-e aderência ao plano, com profundidade proporcional.
+Decide whether a verified change is ready for merge. Review must independently reconstruct the relevant project context so it can find gaps that Planning, Build, or Verify missed.
 
-## Contrato operacional embutido
+## Local Child-Skill Contract
 
-- Classifique cada skill-filha como `USE`, `REUSE`, `SKIP` ou `BLOCKED`; leia integralmente apenas
-  as marcadas `USE`.
-- `USE` significa trigger presente e trabalho ainda não feito; `REUSE`, resultado vigente;
-  `SKIP`, trigger ausente; `BLOCKED`, capacidade necessária sem acesso ou dado indispensável.
-- Use os artefatos canônicos do projeto. Sem outra convenção, leia e atualize `tasks/plan.md`,
-  `tasks/todo.md` e `tasks/state.md`.
-- A skill é autocontida: arquivos em `references/` na raiz são documentação complementar, não
-  pré-condição de execução.
-- Nenhuma transição de fase é automática. `MERGE_READY` não autoriza commit, push ou merge.
+Every child skill is vendored as a sibling under `skills/`.
 
-## Pré-condição
+For each child:
 
-Preferencialmente:
+1. Resolve the sibling path relative to this file.
+2. Read the complete `SKILL.md` before using it.
+3. Apply the workflow within this read-only review boundary.
+4. If a required local file is missing, return `STATUS: BLOCKED`. Do not use an external or remembered substitute.
 
-```text
-STATUS: VERIFIED
-PLAN_VERSION: <n>
-CODE_REVISION: <sha/fingerprint>
-```
+## Exact Skill Set
 
-Pode revisar antes de Verify quando o usuário pedir explicitamente um review intermediário, mas deve
-marcar qualquer claim runtime ainda não provada como pendente; não converta ausência de evidência em
-aprovação.
+This skill may call only:
 
-## Skills permitidas
+- [`context-engineering`](../context-engineering/SKILL.md) — mandatory, first, fresh on every review
+- [`code-review-and-quality`](../code-review-and-quality/SKILL.md) — mandatory
+- [`code-simplification`](../code-simplification/SKILL.md) — conditional
+- [`security-and-hardening`](../security-and-hardening/SKILL.md) — conditional
+- [`performance-optimization`](../performance-optimization/SKILL.md) — conditional
 
-Esta skill pode rotear apenas:
+No other skill may be loaded or invoked.
 
-- `code-review-and-quality`
-- `code-simplification`
-- `security-and-hardening`
-- `performance-optimization`
+## Preconditions
 
-## Triggers
+Require:
 
-| Skill | `USE` quando | `SKIP` quando |
-|---|---|---|
-| `code-review-and-quality` | existe alteração de código, schema, configuração executável ou contrato | mudança puramente textual sem comportamento; faça revisão direta do artefato |
-| `code-simplification` | código funciona, mas há complexidade material, abstração prematura, duplicação relevante ou fluxo difícil de manter | solução já é direta; preferência estética isolada não basta |
-| `security-and-hardening` | mudança toca input externo, auth, autorização, secrets, dados sensíveis, storage, upload, integração ou trust boundary | nenhuma superfície de segurança relevante mudou |
-| `performance-optimization` | há requisito, regressão suspeita, caminho quente ou medição que indique problema | preocupação genérica sem baseline, profile ou impacto plausível |
+- an approved plan version;
+- the implementation or diff under review;
+- current `guto-verify` evidence for that implementation state;
+- access to the surrounding project context.
 
-Não execute todas as quatro por padrão.
+If verification is absent or stale relative to the code, return `STATUS: VERIFICATION_REQUIRED`.
 
-## Grafo de review
+## Step 1 — Mandatory Independent Context Engineering
 
-```text
-PLANO + DIFF + EVIDÊNCIA VERIFIED
-              ↓
-DELIMITAR SUPERFÍCIE E RISCO
-              ↓
-ROTEAR SKILLS APLICÁVEIS
-              ↓
-REVIEW PRIMÁRIO
-              ↓
-ACHADO MATERIAL?
-       ┌──────┴──────┐
-      sim            não
-       │              │
-FIX_REQUEST        MERGE_READY
-       │              ↓
- guto-build           PARAR
-       ↓
- guto-verify
-       ↓
-RECHECK DIRECIONADO (uma rodada normal)
-```
+Always read and execute `context-engineering` first. It may not be skipped, reused as-is, or replaced by Planning or Build summaries.
 
-## Processo
+The review context pass must independently inspect:
 
-### 1. Reancore no objetivo, não na narrativa do implementador
+- the original request and approved plan;
+- scope, non-goals, decisions, assumptions, and acceptance criteria;
+- the complete diff and every changed file;
+- surrounding callers, consumers, interfaces, schemas, and tests;
+- existing canonical implementations and reusable patterns;
+- related configuration, migrations, data flows, or runtime behavior;
+- relevant issues, pull requests, and recent conflicting changes when available;
+- verification evidence and what it did not cover.
 
-Leia:
+Its explicit purpose is to detect missing context: affected code not included in the plan, an existing abstraction not reused, a consumer overlooked, a contract mismatch, a stale assumption, or a test surface omitted earlier.
 
-1. pedido/objetivo e plano aprovados;
-2. critérios de aceite;
-3. diff e arquivos completos relevantes;
-4. evidências de Verify;
-5. padrões canônicos do projeto.
-
-Analise o código real. Resumo de implementação é índice, não prova.
-
-### 2. Delimite a superfície
-
-Registre:
-
-- arquivos e contratos alterados;
-- consumidores e integrações afetados;
-- dados, permissões e estados tocados;
-- riscos declarados no plano;
-- mudanças locais não relacionadas que devem ser preservadas.
-
-Não transforme todo o repositório em escopo do review.
-
-### 3. Rode o roteamento
-
-Classifique as quatro skills como `USE`, `REUSE`, `SKIP` ou `BLOCKED`. Use profundidade:
-
-- `LIGHT` para alteração local e reversível;
-- `STANDARD` para feature/correção normal;
-- `DEEP` para autorização, dados, migração, produção, contrato público ou grande blast radius.
-
-### 4. Faça o review primário
-
-Quando `code-review-and-quality=USE`, avalie:
-
-- **correctness:** lógica, estados de borda, falhas parciais, concorrência e contratos;
-- **readability/simplicity:** fluxo compreensível, nomes e abstrações justificadas;
-- **architecture:** aderência aos boundaries e padrões existentes;
-- **tests/evidence:** cobertura dos riscos e correspondência com o plano;
-- **operability:** erros, rollback, observabilidade e manutenção quando aplicáveis.
-
-Considere comportamento novo e removido. Não limite o review às linhas verdes/vermelhas quando o
-contexto da função ou consumidor for necessário.
-
-### 5. Aplique passes condicionais
-
-#### Simplificação
-
-Use `code-simplification` quando houver evidência concreta de complexidade desnecessária. Preserve o
-comportamento. Sugira a menor simplificação que reduza custo real; não peça refactor cosmético.
-
-#### Segurança
-
-Use `security-and-hardening` somente nas boundaries afetadas. Verifique autorização no servidor,
-validação, exposição de dados, secrets, dependências e failure mode relevantes. Não produza checklist
-OWASP genérico desconectado do diff.
-
-#### Performance
-
-Use `performance-optimization` com abordagem measure-first. Compare com requisito ou baseline. Sem
-medição e sem mecanismo plausível, registre no máximo hipótese não bloqueante.
-
-### 6. Classifique por materialidade
-
-| Severidade | Critério | Disposição |
-|---|---|---|
-| `BLOCKING` | pode produzir comportamento incorreto grave, vulnerabilidade, perda/corrupção de dados, quebra de contrato ou impossibilidade de operar/rollback | deve corrigir antes do merge |
-| `HIGH` | alta probabilidade de regressão relevante, falha em produção ou dívida que torna a mudança insegura de manter agora | deve corrigir nesta entrega |
-| `DEFERRED` | melhoria válida, mas fora do caminho crítico ou sem impacto material nesta entrega | registrar; não bloquear |
-| `INVALID` | preferência, hipótese sem evidência, nit ou finding fora de escopo | descartar |
-
-Um finding só pode ser `BLOCKING` ou `HIGH` quando inclui:
-
-- localização concreta;
-- comportamento atual;
-- mecanismo de falha;
-- impacto no objetivo/aceite;
-- evidência ou reprodução;
-- correção mínima recomendada.
-
-Não infle severidade para garantir atenção.
-
-### 7. Produza o veredito
-
-Formato por finding:
-
-```md
-### F[n] — <BLOCKING | HIGH | DEFERRED>: <título>
-
-- **Local:** `path:linha` ou contrato afetado
-- **Evidência:** <trecho, comando, teste, query ou comportamento>
-- **Mecanismo:** <como a falha acontece>
-- **Impacto:** <qual objetivo, usuário ou critério é afetado>
-- **Correção mínima:** <escopo recomendado>
-- **Reteste:** <claims/comandos que devem rodar novamente>
-```
-
-Findings `DEFERRED` ficam separados dos requeridos.
-
-### 8. Retorne correções ao Build
-
-Se existir `BLOCKING` ou `HIGH`:
+Produce a `CONTEXT_GAP_AUDIT` with:
 
 ```text
-STATUS: REVIEW_FIX_REQUIRED
-RETURN_TO: guto-build
-REVERIFY: <claims afetadas>
-REREVIEW: <áreas afetadas>
+EXPECTED_SURFACE:
+ACTUAL_SURFACE:
+ADDITIONAL_RELEVANT_CONTEXT:
+OMITTED_OR_STALE_CONTEXT:
+IMPACT_ON_PLAN_OR_CHANGE:
 ```
 
-Review não aplica a correção. Depois do Build, `guto-verify` repete as provas afetadas e o Review faz
-uma rechecagem direcionada.
+If a context gap invalidates objective, scope, architecture, public contract, or acceptance criteria, return `STATUS: REPLAN_REQUIRED`.
 
-Uma rechecagem normal é suficiente. Se ela revelar um novo conjunto material não causado pelo fix,
-pare e exponha a limitação em vez de entrar em review infinito.
+## Step 2 — Mandatory Code Review
 
-### 9. Feche
+Read and execute `code-review-and-quality` against the reconstructed context, verified evidence, and actual change.
 
-Somente com zero `BLOCKING` e zero `HIGH` aberto:
+Review correctness first, then readability, architecture, security, performance, and verification quality. Findings must identify:
+
+- severity;
+- concrete evidence and location;
+- affected behavior or contract;
+- why it matters;
+- required remedy or named structural move;
+- whether it requires Build, Verify, or Planning.
+
+Do not block for stylistic preference or unrelated cleanup.
+
+## Step 3 — Conditional Specialist Passes
+
+After the primary review, classify each specialist skill as `USE` or `SKIP`.
+
+### `code-simplification`
+
+Use when the change works but introduces or preserves material avoidable complexity, duplication, deep nesting, unclear boundaries, or an abstraction that does not earn its cost.
+
+Skip when the code is already clear or simplification would be cosmetic churn.
+
+### `security-and-hardening`
+
+Use when the change touches any trust boundary, untrusted input, authentication, authorization, secrets, sensitive data, storage, files, webhooks, external services, permissions, dependency supply chain, or LLM/tool execution.
+
+Skip only when none of those surfaces are present.
+
+### `performance-optimization`
+
+Use when there is a performance requirement, measured or suspected regression, hot path, high-volume query, large dataset, critical latency path, or material frontend runtime impact.
+
+Skip when no performance claim or plausible material regression exists. It is measure-first; do not invent performance findings without evidence.
+
+Record the trigger and decision for all three.
+
+## Read-Only Boundary
+
+Review does not implement fixes, simplify code, harden code, or optimize code directly. A specialist skill is used to identify and specify the required change. Mutation returns to `guto-build`, followed by renewed `guto-verify` and a targeted review of the affected surface.
+
+## Finding Disposition
+
+Use:
+
+- `CRITICAL` — security vulnerability, data loss, broken correctness, or other merge blocker
+- `REQUIRED` — material issue that must be fixed before merge
+- `OPTIONAL` — useful improvement that does not block merge
+- `NIT` — minor style preference
+- `FYI` — information only
+
+Only `CRITICAL` and `REQUIRED` block `MERGE_READY`.
+
+A finding that changes the approved planning contract returns to `guto-plan`. A code-level remedy returns to `guto-build`.
+
+## Output
+
+End with exactly one status:
+
+- `STATUS: MERGE_READY`
+- `STATUS: FIX_REQUIRED`
+- `STATUS: REPLAN_REQUIRED`
+- `STATUS: VERIFICATION_REQUIRED`
+- `STATUS: BLOCKED`
+
+For `MERGE_READY`, include:
 
 ```text
-STATUS: MERGE_READY
+PLAN_VERSION: <number>
+CONTEXT_ENGINEERING: EXECUTED_FRESH
+CONTEXT_GAPS: none material
+PRIMARY_REVIEW: PASSED
+SIMPLIFICATION: USED | SKIPPED
+SECURITY: USED | SKIPPED
+PERFORMANCE: USED | SKIPPED
+BLOCKING_FINDINGS: 0
+NEXT_ACTION: Human merge decision. No merge, push, or deploy was performed.
 ```
 
-Isso não autoriza commit, push, merge ou deploy. A decisão final é humana.
+## Verification
 
-## Saída
-
-```text
-STATUS: MERGE_READY | REVIEW_FIX_REQUIRED | REPLAN_REQUIRED | BLOCKED
-PLAN_VERSION: <n>
-CODE_REVISION: <sha/fingerprint>
-ROUTING: <skills usadas/puladas>
-FINDINGS_REQUIRED: <quantidade e IDs>
-FINDINGS_DEFERRED: <quantidade e IDs>
-VERDICT: <explicação curta>
-NEXT: decisão humana ou retorno ao guto-build
-```
-
-## Red flags
-
-- executar security/performance/simplification sem trigger;
-- revisar apenas o resumo e não o código;
-- repetir testes já provados sem motivo;
-- classificar nit como bloqueante;
-- finding sem localização, mecanismo ou impacto;
-- pedir refactor amplo quando uma correção local resolve;
-- alterar código dentro do Review;
-- aprovar com evidence gap conhecido;
-- fazer merge automaticamente;
-- iniciar rodadas indefinidas sem informação nova.
-
-## Verificação do Review
-
-- [ ] O review foi ancorado no plano, diff e evidência atual.
-- [ ] A superfície foi delimitada.
-- [ ] Apenas skills com trigger foram usadas.
-- [ ] Findings requeridos possuem evidência e mecanismo concretos.
-- [ ] Melhorias opcionais não bloquearam o merge.
-- [ ] Correções foram devolvidas ao Build com reteste definido.
-- [ ] `MERGE_READY` não foi tratado como autorização de merge.
+- [ ] A fresh independent `context-engineering` pass ran first
+- [ ] The context-gap audit compared expected and actual affected surfaces
+- [ ] `code-review-and-quality` was read and executed
+- [ ] All three specialist skills received an explicit trigger decision
+- [ ] Findings are evidence-backed and severity-labelled
+- [ ] No product code was modified
+- [ ] No unlisted skill was loaded
+- [ ] Current verification evidence matches the reviewed implementation
+- [ ] Merge remains a human decision

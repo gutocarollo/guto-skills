@@ -1,154 +1,118 @@
 ---
 name: clarification-plan
-description: Estrutura decisões técnicas ou de produto que permanecem materialmente abertas após investigação. Use quando duas ou mais opções reais mudam o plano, o contrato, o risco ou o critério de aceite e a escolha depende do usuário; não use para fatos pesquisáveis, detalhes locais reversíveis ou preferências sem impacto material.
+description: Resolves material planning decisions after factual investigation. Use when two or more viable choices remain and the correct answer depends on human priorities, policy, risk tolerance, or business intent rather than information discoverable from the project.
 ---
 
 # Clarification Plan
 
-## Objetivo
+## Purpose
 
-Transformar ambiguidade material em uma decisão informada. Esta skill não transfere pesquisa para o
-usuário e não cria perguntas por precaução. Primeiro investiga; depois apresenta consequências
-concretas; por fim recomenda uma opção.
+Help the user make a material decision with concrete consequences. Do not transfer raw ambiguity to the user and do not consume attention on low-impact details.
 
-## Quando usar
+## Preconditions
 
-Use quando todas as condições forem verdadeiras:
+Before asking a question:
 
-1. há pelo menos duas opções tecnicamente plausíveis;
-2. código, documentação, dados e padrões existentes não determinam sozinhos a resposta;
-3. a escolha muda materialmente escopo, arquitetura, contrato, aceite, custo, risco ou experiência;
-4. escolher errado agora causaria retrabalho relevante ou uma decisão difícil de reverter;
-5. o usuário tem autoridade ou preferência legítima para decidir.
+1. Read the current objective, plan, and context pack.
+2. Search canonical project decisions, code, tests, docs, data, and runtime evidence that could answer it.
+3. Remove any question already answered by evidence or an existing decision.
+4. Confirm that choosing differently would materially change scope, architecture, contract, acceptance criteria, risk, cost, or user-visible behavior.
 
-## Quando não usar
+If the missing answer is factual or testable, investigate it instead of asking the user.
 
-Não use para:
+For a bug, establish the best-supported root cause before presenting repair choices. If the root cause is not yet supported, return an investigation plan rather than a menu of fixes.
 
-- informação que pode ser encontrada no repositório, documentação oficial, banco ou runtime;
-- bug cuja causa-raiz ainda não foi investigada;
-- nome de função, organização de arquivo ou detalhe local reversível;
-- melhoria opcional fora do escopo atual;
-- pergunta que o usuário não consegue resolver por falta de acesso ou autoridade;
-- confirmar uma decisão já registrada em plano, ADR, schema ou instrução canônica.
+## Materiality Test
 
-## Fluxo
+A decision is material when all are true:
+
+- at least two viable paths remain after investigation;
+- the paths have materially different consequences;
+- the answer depends on a human preference, policy, business rule, irreversible action, or risk tolerance;
+- the current plan cannot be finalized honestly without the choice.
+
+Naming, formatting, local file placement, and other reversible implementation details normally do not qualify.
+
+## Interaction Rule
+
+Ask one material decision at a time. Wait for the user's answer before advancing to a dependent decision.
+
+Do not ask a bare question such as "A or B?" Each option must make the resulting behavior visible.
+
+## Required Decision Block
+
+```markdown
+### D[n] — [Concrete decision]
+
+**Why this is still open:** [what was investigated and why evidence cannot decide it]
+**Evidence:** [paths, commands, queries, documents, or observed facts]
+**Unlocks:** [what part of the plan depends on the answer]
+
+**Option A — [name]**
+- **Behavior:** [what the system or process will do]
+- **Applied good example:** [real project scenario and good result]
+- **Applied bad example:** [real project scenario and cost or failure mode]
+- **Choose when:** [objective priority]
+
+**Option B — [name]**
+- **Behavior:** ...
+- **Applied good example:** ...
+- **Applied bad example:** ...
+- **Choose when:** ...
+
+**Option C — [hybrid, spike, fallback, or staged choice]**
+- Include only when A and B alone are both materially deficient.
+- Use the same behavior and applied-example structure.
+
+**Recommendation: Option [X]** — [evidence-based reason]
+```
+
+An applied example names a real file, interface, route, job, table, workflow, user journey, command, or operational scenario from the current project. Generic analogies do not count.
+
+## Decision Cycle
+
+1. Inventory all known material decisions, but present only the next independent decision.
+2. Investigate before writing the decision block.
+3. Remove decisions already resolved by canon or evidence.
+4. Present options and a recommendation.
+5. Record the user's decision and rationale in the planning artifacts.
+6. Update only the affected sections of the plan.
+7. Re-run the materiality test for remaining decisions.
+8. Stop when no material human decision remains.
+
+## Output
+
+For an open decision:
 
 ```text
-LACUNA
-  ↓
-INVESTIGAR FONTES REAIS
-  ↓
-DECISÃO JÁ ESTÁ TOMADA?
-  ├── sim → registrar a fonte e remover a pergunta
-  └── não
-       ↓
-MATERIAL E HUMANA?
-  ├── não → decidir tecnicamente ou registrar como deferred
-  └── sim
-       ↓
-OPÇÕES + CONSEQUÊNCIAS + RECOMENDAÇÃO
-       ↓
-RESPOSTA DO USUÁRIO
-       ↓
-ATUALIZAR SOMENTE O PLANO AFETADO
+STATUS: DECISION_REQUIRED
+DECISION_ID: D[n]
 ```
 
-## 1. Investigue antes de perguntar
+When all material decisions are closed:
 
-Consulte, conforme o caso:
-
-- pedido original e plano vigente;
-- código e testes relevantes;
-- documentação canônica e ADRs;
-- versões reais das dependências;
-- dados ou comportamento runtime;
-- padrões já adotados no projeto.
-
-Para bugs, reproduza e localize a causa antes de oferecer soluções. Se a causa ainda estiver aberta,
-entregue um plano de investigação, não um menu de correções.
-
-## 2. Faça inventário das decisões materiais
-
-Liste internamente todas as decisões conhecidas, mas apresente **uma por vez por padrão**. Pode
-agrupar até três decisões independentes quando o usuário pedir explicitamente um lote.
-
-Ordene por dependência: uma decisão que elimina outras vem primeiro.
-
-## 3. Formato obrigatório
-
-```md
-### D[n] — <pergunta concreta>
-
-**Por que precisa de decisão humana:** <critério que não pode ser deduzido>
-**Evidência:** <arquivo:linha, query, comando, documentação ou runtime>
-**Destrava:** <parte do plano que depende da resposta>
-
-#### Opção A — <nome>
-- **Comportamento:** <efeito concreto>
-- **Exemplo aplicado bom:** <resultado no caso real do projeto>
-- **Exemplo aplicado ruim:** <custo ou falha no caso real>
-- **Escolha quando:** <prioridade que favorece A>
-
-#### Opção B — <nome>
-- **Comportamento:** ...
-- **Exemplo aplicado bom:** ...
-- **Exemplo aplicado ruim:** ...
-- **Escolha quando:** ...
-
-#### Opção C — <terceira via, quando A e B isoladas forem insuficientes>
-- **Comportamento:** ...
-- **Exemplo aplicado bom:** ...
-- **Exemplo aplicado ruim:** ...
-- **Escolha quando:** ...
-
-**Recomendo: Opção X** — <critério objetivo e evidência que sustentam a recomendação>.
+```text
+STATUS: DECISIONS_RESOLVED
+OPEN_MATERIAL_DECISIONS: 0
 ```
 
-A Opção C pode ser combinação, spike, fallback, rollout gradual ou preservação temporária do caminho
-atual. Não invente C quando A ou B já domina claramente.
+## Anti-Patterns
 
-## 4. Regras de qualidade
+- Asking about a fact that tools or project sources can answer
+- Asking about an option already selected in canonical documentation
+- Presenting ten low-impact choices while a critical decision remains hidden
+- Giving options without a recommendation
+- Using generic examples unrelated to the actual project
+- Treating an unproven bug hypothesis as a root cause
+- Rewriting the entire plan after a local decision
+- Adding scores, council states, ledgers, or mandatory graph identifiers
 
-- Opções devem produzir comportamentos diferentes, não apenas redações diferentes.
-- Exemplos devem citar entidade, rota, tabela, arquivo, job, tela, comando ou fluxo real.
-- Toda opção deve ter pelo menos um benefício e um custo honesto.
-- A recomendação é obrigatória; recomendar não significa decidir pelo usuário.
-- Não use jargão como substituto de consequência operacional.
-- Não apresente opção inviável apenas para fabricar contraste.
-- Não use percentuais de confiança ou progresso sem denominador medido.
+## Verification
 
-## 5. Depois da resposta
-
-1. registre a decisão e sua razão em `tasks/plan.md` ou no artefato canônico do projeto;
-2. atualize apenas as tarefas, critérios e riscos afetados;
-3. incremente a versão do plano somente se a mudança for material;
-4. retire a decisão da lista aberta em `tasks/state.md`;
-5. continue o planejamento até não restar decisão material conhecida.
-
-## Saídas válidas
-
-- `DECIDED`: usuário escolheu e o plano foi atualizado;
-- `ALREADY_DECIDED`: fonte canônica já resolvia a questão;
-- `INVESTIGATION_REQUIRED`: falta causa ou evidência para formular opções honestas;
-- `BLOCKED`: dependência externa nominal impede investigar ou decidir.
-
-## Red flags
-
-- perguntar “A ou B?” sem explicar comportamento e trade-off;
-- perguntar antes de ler código, docs ou dados disponíveis;
-- oferecer correções para bug não reproduzido;
-- pedir decisão já registrada no plano ou ADR;
-- transformar toda incerteza em pergunta ao usuário;
-- listar opções sem recomendar uma;
-- continuar planejando como se uma decisão material ainda aberta estivesse resolvida.
-
-## Verificação
-
-- [ ] A lacuna foi investigada antes da pergunta.
-- [ ] A decisão é material e genuinamente humana.
-- [ ] Nenhuma fonte canônica já decide a questão.
-- [ ] As opções têm comportamentos e consequências concretas.
-- [ ] Exemplos são aplicados ao projeto real.
-- [ ] Há recomendação explícita sustentada por evidência.
-- [ ] O plano e o estado foram atualizados depois da resposta.
+- [ ] The question is genuinely material
+- [ ] Relevant evidence and canonical decisions were checked first
+- [ ] Each option describes behavior and real project consequences
+- [ ] A recommendation is explicit
+- [ ] Only one independent decision was presented
+- [ ] The user's answer was recorded in the plan
+- [ ] No low-impact implementation detail consumed a decision slot

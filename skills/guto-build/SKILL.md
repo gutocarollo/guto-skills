@@ -1,264 +1,167 @@
 ---
 name: guto-build
-description: Executa uma versão aprovada do plano em incrementos proporcionais, com preflight de tarefa, documentação oficial quando relevante, checks locais e atualização contínua dos checkboxes. Use quando existe plano executável aprovado e o usuário quer implementar; interrompe em drift material e para ao final com BUILD_READY_FOR_VERIFY.
+description: Executes an explicitly approved plan using refreshed project context, task preflight, authoritative sources, and incremental implementation. Use when a specific approved plan version is ready to be implemented.
 ---
 
 # Guto Build
 
-## Objetivo
+## Purpose
 
-Executar somente o plano aprovado, tarefa por tarefa, preservando foco no objetivo diretor e evitando
-implementação em lote. Esta skill modifica o produto, mas não executa a verificação consolidada, o
-review final, push ou merge automaticamente.
+Implement one approved plan version without silently changing its objective, scope, contracts, or acceptance criteria. Update task checkboxes and collect local evidence, then stop before formal verification.
 
-## Contrato operacional embutido
+## Local Child-Skill Contract
 
-- Classifique cada skill-filha como `USE`, `REUSE`, `SKIP` ou `BLOCKED`; leia integralmente apenas
-  as marcadas `USE`.
-- `USE` significa trigger presente e trabalho ainda não feito; `REUSE`, resultado vigente;
-  `SKIP`, trigger ausente; `BLOCKED`, capacidade necessária sem acesso ou dado indispensável.
-- Use os artefatos canônicos do projeto. Sem outra convenção, consuma e atualize `tasks/plan.md`,
-  `tasks/todo.md` e `tasks/state.md`.
-- A skill é autocontida: arquivos em `references/` na raiz são documentação complementar, não
-  pré-condição de execução.
-- Nenhuma transição de fase é automática. `BUILD_READY_FOR_VERIFY` devolve o controle ao usuário.
+Every child skill is vendored as a sibling under `skills/`.
 
-## Pré-condição
+For each child:
 
-Precisa existir uma fonte de plano com:
+1. Resolve the sibling path relative to this file.
+2. Read the complete `SKILL.md` before using it.
+3. Execute the child workflow under this phase's scope.
+4. If a local child file is missing or unreadable, return `STATUS: BLOCKED`. Do not substitute a remembered or external version.
 
-- versão aprovada;
-- tarefas ou próximo entregável identificável;
-- critérios de aceite;
-- estratégia de verificação.
+## Exact Skill Set and Fixed Order
 
-Fontes aceitas:
+`guto-build` calls exactly these skills, in this order:
 
-- `tasks/plan.md` + `tasks/todo.md` + `tasks/state.md`;
-- path explícito equivalente;
-- plano inline aprovado pelo usuário.
+1. [`context-engineering`](../context-engineering/SKILL.md)
+2. [`planning-and-task-breakdown`](../planning-and-task-breakdown/SKILL.md)
+3. [`source-driven-development`](../source-driven-development/SKILL.md)
+4. [`incremental-implementation`](../incremental-implementation/SKILL.md)
 
-Sem plano executável, retorne `REPLAN_REQUIRED`; não invente um plano silencioso dentro do Build.
+All four are mandatory on every `guto-build` invocation. No other skill may be loaded or invoked.
 
-## Skills permitidas
+## Preconditions
 
-Esta skill pode rotear apenas:
+Before editing product code, require:
 
-- `planning-and-task-breakdown`
-- `source-driven-development`
-- `incremental-implementation`
-- `test-driven-development`
-- `frontend-ui-engineering`
-- `api-and-interface-design`
-- `security-and-hardening`
-- `observability-and-instrumentation`
-- `deprecation-and-migration`
-- `documentation-and-adrs`
-- `git-workflow-and-versioning`
+- an explicit human-approved `PLAN_VERSION`;
+- a readable plan and task checklist, using project-native paths or the fallback `tasks/plan.md` and `tasks/todo.md`;
+- no unresolved material decision for the next task;
+- a clean understanding of unrelated worktree changes that must be preserved.
 
-## Preflight obrigatório, workflow proporcional
+If the plan is absent, not approved, or ambiguous, return `STATUS: PLAN_REQUIRED` without editing code.
 
-Antes de cada tarefa, avalie obrigatoriamente estas três skills, sem necessariamente executá-las:
+## Step 1 — Mandatory Context Engineering
 
-| Skill | Regra |
-|---|---|
-| `planning-and-task-breakdown` | `REUSE` quando a tarefa aprovada já é pequena, ordenada e verificável; `USE` apenas para decompor o item atual sem mudar o contrato; `REPLAN_REQUIRED` se a decomposição exigir mudança material |
-| `source-driven-development` | `USE` quando a tarefa depende de framework, biblioteca, API ou versão; `REUSE` quando a fonte já foi verificada para a mesma versão e decisão; `SKIP` para lógica/versionamento irrelevante |
-| `incremental-implementation` | `USE` para mudança não trivial ou multi-arquivo; `SKIP` apenas quando a alteração é mínima e indivisível, mantendo as mesmas regras de escopo e check local |
+Always read and execute the local `context-engineering` skill first.
 
-Isso satisfaz a sequência:
+Build a focused execution context pack containing:
+
+- approved plan version and current unchecked task;
+- objective, scope, non-goals, decisions, and acceptance criteria;
+- actual files and tests affected by the next task;
+- existing local implementation patterns and reusable utilities;
+- exact dependency, framework, runtime, and tool versions;
+- current worktree state and unrelated changes to preserve;
+- relevant errors, runtime state, schema, or data;
+- any discovery that conflicts with the approved plan.
+
+A context pack from Planning is input, not a substitute. Code and project state may have changed.
+
+## Step 2 — Mandatory Task Preflight
+
+Read and execute `planning-and-task-breakdown` against the approved plan and the next unchecked task.
+
+This is a focused preflight, not permission to redesign the whole plan. Confirm:
+
+- task objective and acceptance criteria;
+- dependencies are complete;
+- task size is executable;
+- likely files and tests are still correct;
+- verification commands are concrete;
+- the task leaves the repository in a working state.
+
+If the task is too large, split it without changing plan intent. If the preflight exposes a material plan flaw, return `STATUS: REPLAN_REQUIRED`.
+
+## Step 3 — Mandatory Source-Driven Pass
+
+Read and execute `source-driven-development` after task preflight and before implementation.
+
+It must:
+
+- detect the exact stack and versions from the repository;
+- identify every implementation decision that depends on a framework, library, protocol, standard, or tool version;
+- fetch authoritative documentation for those decisions;
+- record the sources and version-specific constraints;
+- surface conflicts between current official guidance and project conventions.
+
+For a task with no version-dependent implementation decision, still run the pass and record:
 
 ```text
-TASK PLAN VALIDATION
-        +
-SOURCE VALIDATION QUANDO APLICÁVEL
-        ↓
-INCREMENTAL IMPLEMENTATION QUANDO APLICÁVEL
+SOURCE_RESULT: NO_VERSION_DEPENDENT_DECISION
 ```
 
-Não execute integralmente `planning-and-task-breakdown` e `source-driven-development` antes de todo
-item quando os resultados continuam válidos.
+Do not skip the skill.
 
-## Triggers das demais skills
+A conflict that changes architecture, public contract, scope, or acceptance criteria requires `STATUS: REPLAN_REQUIRED`. A local, reversible implementation detail may be resolved within the task and documented.
 
-| Skill | `USE` quando |
-|---|---|
-| `test-driven-development` | bug, regra de negócio ou comportamento observável está sendo criado/alterado |
-| `frontend-ui-engineering` | UI, acessibilidade, responsividade, design system ou estado visual será alterado |
-| `api-and-interface-design` | a tarefa implementa contrato já planejado; se precisar redesenhar o contrato, retorne a Planning |
-| `security-and-hardening` | input externo, auth, autorização, secret, dado sensível, storage ou integração cruza trust boundary |
-| `observability-and-instrumentation` | o caminho novo precisa ser diagnosticável em produção ou o plano exige telemetria |
-| `deprecation-and-migration` | há transição de schema, contrato, consumidor ou caminho legado |
-| `documentation-and-adrs` | o plano exige documentação operacional ou registro da decisão já aprovada |
-| `git-workflow-and-versioning` | o usuário pediu commit/branch ou a política canônica do projeto exige checkpoints Git |
+## Step 4 — Mandatory Incremental Implementation
 
-## Grafo de execução
+Read and execute `incremental-implementation`.
 
-```text
-PLANO APROVADO
-      ↓
-SELECIONAR PRÓXIMA TAREFA ABERTA
-      ↓
-ANTI-DRIFT + PREFLIGHT
-      ↓
-ROTEAR SKILLS APLICÁVEIS
-      ↓
-MENOR INCREMENTO ÚTIL
-      ↓
-CHECK LOCAL FOCADO
-   ┌──┴─────────────┐
- falha             passa
-   │                 │
-diagnosticar     atualizar todo/state
-   │                 │
-corrigir mesmo       ├── próximo incremento
-escopo ou parar      ├── checkpoint humano
-                     ├── REPLAN_REQUIRED
-                     └── BUILD_READY_FOR_VERIFY
-```
+For each smallest useful slice:
 
-## Processo
+1. restate the approved task and slice boundary;
+2. modify only the files required for that slice;
+3. run the focused local checks defined by the plan and repository;
+4. preserve unrelated worktree changes;
+5. update `tasks/todo.md` only when evidence supports the checkbox;
+6. update `tasks/state.md` with the current task and evidence;
+7. continue only while the approved plan remains valid.
 
-### 1. Fixe a versão executável
+Local checks prevent compounded errors. They do not replace `guto-verify`.
 
-Leia o estado e confirme:
+Do not perform unrelated cleanup. Do not add a new dependency unless the approved plan permits it or the human explicitly approves the change.
 
-```text
-PLAN_VERSION: <n>
-STATUS: PLAN_APPROVED
-CURRENT_TASK: <id ou próxima aberta>
-OBJECTIVE: <uma frase>
-DO_NOT_DRIFT: <restrições principais>
-```
+## Material Drift Rule
 
-Se o plano mudou depois da aprovação e não foi reaprovado, pare.
+Return `STATUS: REPLAN_REQUIRED` when a discovery changes any of:
 
-### 2. Selecione apenas a próxima tarefa elegível
+- objective or intended outcome;
+- in-scope or out-of-scope boundary;
+- architecture or critical dependency direction;
+- public API, interface, schema, or data contract;
+- acceptance criteria;
+- critical task order;
+- a high-impact assumption.
 
-Respeite dependências e checkpoints. Não execute tarefas futuras “já que o arquivo está aberto”.
+Do not replan for a local file choice, naming detail, test adjustment, or other reversible implementation detail that preserves the approved contract.
 
-Marque `CURRENT_TASK` antes de editar o produto. Não marque o checkbox como concluído ainda.
+## Human Boundary
 
-### 3. Faça o anti-drift
+This phase never invokes `guto-verify`, `guto-review`, merge, push, or deployment automatically.
 
-Confirme que a tarefa:
+## Output
 
-- contribui diretamente para o objetivo;
-- está dentro do escopo;
-- pertence à versão aprovada;
-- satisfaz critério de aceite ou dependência explícita.
+End with exactly one status:
 
-Trabalho útil, mas não planejado, vai para `Deferred`; não é implementado nesta execução.
+- `STATUS: BUILD_READY_FOR_VERIFY`
+- `STATUS: REPLAN_REQUIRED`
+- `STATUS: PLAN_REQUIRED`
+- `STATUS: BLOCKED`
 
-### 4. Execute o preflight
-
-Classifique as skills permitidas em `USE`, `REUSE`, `SKIP` ou `BLOCKED`. Antes de codar, resolva:
-
-- arquivos e padrões locais relevantes;
-- versões reais de dependências;
-- documentação oficial necessária;
-- contrato já aprovado;
-- comando de check local adequado.
-
-Se surgir uma decisão material de arquitetura, escopo, contrato ou aceite, escreva
-`STATUS=REPLAN_REQUIRED`, descreva a descoberta e pare. Não use uma escolha local para reescrever o
-plano.
-
-### 5. Implemente o menor incremento útil
-
-Quando `incremental-implementation=USE`:
-
-1. escolha um slice que produza comportamento ou fundação verificável;
-2. altere somente os arquivos necessários;
-3. preserve mudanças locais não relacionadas;
-4. evite abstração para necessidade hipotética;
-5. não misture feature, refactor e cleanup ortogonal;
-6. mantenha rollback simples quando o risco justificar.
-
-Quando `test-driven-development=USE`, siga RED → GREEN → REFACTOR. Não escreva implementação ampla
-para depois tentar encaixar testes.
-
-### 6. Execute check local após mudança relevante
-
-Use o comando mais focado que pode refutar o incremento:
-
-- teste unitário ou de integração afetado;
-- typecheck do pacote;
-- lint do escopo;
-- build parcial;
-- query/fixture;
-- checagem manual concreta quando não houver automação.
-
-Não repita comando verde se nenhum código relevante mudou desde a execução anterior.
-
-Falha esperada durante TDD não é bloqueio. Falha inesperada deve ser localizada antes de expandir o
-slice. Não acumule tarefas sobre baseline quebrada.
-
-### 7. Atualize os artefatos
-
-Depois de um incremento realmente concluído:
-
-- registre a evidência local;
-- marque o checkbox correspondente ou subdivida a tarefa;
-- atualize `LAST_COMPLETED` e `CURRENT_TASK`;
-- mantenha findings fora de escopo em `Deferred`;
-- preserve a versão do plano.
-
-Checkbox significa entregável completo para aquele item, não apenas código escrito.
-
-### 8. Use Git somente quando autorizado ou exigido
-
-- não faça commit por padrão apenas porque um slice terminou;
-- quando o usuário pedir commit ou o projeto exigir, use `git-workflow-and-versioning` para commits
-  atômicos;
-- nunca faça push, force-push, merge ou deploy sem autorização explícita separada.
-
-### 9. Feche o Build
-
-Quando todas as tarefas aprovadas estiverem implementadas e os checks locais aplicáveis estiverem
-verdes, atualize:
+For `BUILD_READY_FOR_VERIFY`, include:
 
 ```text
-STATUS: BUILD_READY_FOR_VERIFY
-CURRENT_PHASE: VERIFY
-CURRENT_TASK: none
-```
-
-Não execute `guto-verify` automaticamente.
-
-## Saída
-
-```text
-STATUS: BUILD_READY_FOR_VERIFY | REPLAN_REQUIRED | BLOCKED
-PLAN_VERSION: <n>
+PLAN_VERSION: <approved version>
+CONTEXT_ENGINEERING: EXECUTED
 TASKS_COMPLETED: <ids>
+TASKS_REMAINING: <ids or none>
+LOCAL_CHECKS: <commands and results>
+SOURCE_RESULT: <sources or NO_VERSION_DEPENDENT_DECISION>
 FILES_CHANGED: <paths>
-LOCAL_CHECKS: <comando e resultado>
-SKILLS_USED: <lista>
-DEFERRED: <itens fora do escopo>
-NEXT: auditoria humana; depois invocar guto-verify
+NEXT_ACTION: Human audit, then invoke guto-verify explicitly.
 ```
 
-## Red flags
+## Verification
 
-- começar sem versão aprovada do plano;
-- replanejar arquitetura dentro do Build;
-- executar toda a allowlist em cada tarefa;
-- escrever centenas de linhas antes do primeiro check;
-- usar frontend skill em backend, browser skill em CLI ou security review sem trust boundary;
-- corrigir item fora de escopo “aproveitando” o contexto;
-- marcar checkbox sem evidência;
-- repetir builds/testes verdes sem mudança interveniente;
-- fazer commit, push ou merge sem pedido/política explícita;
-- iniciar Verify automaticamente ao terminar.
-
-## Verificação do Build
-
-- [ ] A versão executada estava aprovada.
-- [ ] Cada tarefa respeitou dependências e escopo.
-- [ ] O preflight avaliou plan breakdown, fontes e incrementalidade.
-- [ ] Apenas skills com trigger foram carregadas.
-- [ ] Cada mudança relevante recebeu check local.
-- [ ] Checkboxes e estado refletem o que realmente foi concluído.
-- [ ] Drift material retornou a Planning em vez de ser decidido silenciosamente.
-- [ ] O Build parou em `BUILD_READY_FOR_VERIFY`.
+- [ ] The approved plan version was explicit
+- [ ] `context-engineering` was read and executed first
+- [ ] `planning-and-task-breakdown` was read and executed as task preflight
+- [ ] `source-driven-development` was read and executed before code changes
+- [ ] `incremental-implementation` governed all edits
+- [ ] No unlisted skill was loaded
+- [ ] Checkboxes are supported by real local evidence
+- [ ] Material drift caused a return to Planning
+- [ ] The phase stopped before formal verification

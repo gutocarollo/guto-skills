@@ -1,248 +1,151 @@
 ---
 name: guto-plan
-description: Orquestra definição e planejamento com contexto proporcional, refinamento de ideia, entrevista e clarificação material até produzir um plano executável e auditável. Use quando uma feature, correção ampla, arquitetura, migração ou tarefa multietapa precisa ser consolidada antes de qualquer implementação; para explicitamente antes do Build e aguarda aprovação humana.
+description: Builds and refines an implementation plan from real project context. Use when a task needs discovery, requirements clarification, idea refinement, specification, material decisions, or an executable task breakdown before code changes.
 ---
 
 # Guto Plan
 
-## Objetivo
+## Purpose
 
-Produzir um plano **decision-complete para o escopo atual**: nenhuma decisão material conhecida fica
-aberta e nenhuma tarefa depende de premissa crítica não verificada. Não promete contexto literalmente
-completo nem um plano imune a toda descoberta futura.
+Turn the user's request into an approved, decision-complete implementation plan. This skill is read-only with respect to product code. It may create or update planning artifacts, but it must not implement the change or start `guto-build`.
 
-Esta skill não edita o produto e não inicia `guto-build` automaticamente.
+## Local Child-Skill Contract
 
-## Contrato operacional embutido
+Every child skill is vendored as a sibling under `skills/`.
 
-- Classifique cada skill-filha como `USE`, `REUSE`, `SKIP` ou `BLOCKED`; leia integralmente apenas
-  as marcadas `USE`.
-- `USE` significa trigger presente e trabalho ainda não feito; `REUSE`, resultado vigente;
-  `SKIP`, trigger ausente; `BLOCKED`, capacidade necessária sem acesso ou dado indispensável.
-- Use a convenção canônica do projeto. Sem outra existente, persista em `tasks/plan.md`,
-  `tasks/todo.md` e `tasks/state.md`.
-- A skill é autocontida: arquivos em `references/` na raiz são documentação complementar, não
-  pré-condição de execução.
-- Nenhuma transição de fase é automática. `PLAN_READY` aguarda aprovação humana explícita.
+When this skill calls a child skill:
 
-## Entrada
+1. Resolve the sibling path relative to this file.
+2. Read the complete `SKILL.md` before using it. Do not rely on memory or a summary.
+3. Follow the child workflow while preserving this skill's phase boundary and stop condition.
+4. If the required local file is missing or unreadable, return `STATUS: BLOCKED`. Do not silently substitute an external or remembered version.
 
-Aceite qualquer combinação de:
+## Exact Skill Set
 
-- pedido atual;
-- issue, PRD, documento, diff ou plano preliminar;
-- `tasks/plan.md`, `tasks/todo.md` e `tasks/state.md` existentes;
-- `DEPTH=AUTO | LIGHT | STANDARD | DEEP` opcional.
+This skill may call only:
 
-Quando já houver plano, atualize-o; não recomece do zero sem causa material.
+- [`context-engineering`](../context-engineering/SKILL.md) — mandatory, first, on every invocation
+- [`interview-me`](../interview-me/SKILL.md) — conditional
+- [`idea-refine`](../idea-refine/SKILL.md) — conditional
+- [`clarification-plan`](../clarification-plan/SKILL.md) — conditional
+- [`spec-driven-development`](../spec-driven-development/SKILL.md) — conditional
+- [`planning-and-task-breakdown`](../planning-and-task-breakdown/SKILL.md) — mandatory before `PLAN_READY`
 
-## Skills permitidas
+No other skill may be loaded or invoked by `guto-plan`.
 
-Esta skill pode rotear apenas:
+## Mandatory Context Pass
 
-- `context-engineering`
-- `interview-me`
-- `idea-refine`
-- `clarification-plan`
-- `spec-driven-development`
-- `source-driven-development`
-- `api-and-interface-design`
-- `documentation-and-adrs`
-- `planning-and-task-breakdown`
+`context-engineering` is not optional and is not part of `USE | REUSE | SKIP | BLOCKED` routing. It is always `USE`.
 
-Não use todas por padrão.
+Run it before asking questions, proposing architecture, writing a specification, or decomposing tasks. A previous summary or context pack may be input, but never replaces a fresh context pass.
 
-## Triggers
+The context pass must produce a focused planning context pack containing:
 
-| Skill | `USE` quando | `SKIP`/`REUSE` quando |
+- the user's original request and later amendments;
+- existing canonical plans, specifications, ADRs, rules, and task files;
+- relevant source files, tests, interfaces, schemas, and local patterns;
+- current stack and versions when they affect the plan;
+- related issues, pull requests, runtime evidence, or data when available and material;
+- known constraints, conflicts, assumptions, and unresolved gaps;
+- a list of sources intentionally excluded as irrelevant.
+
+Context sufficiency means that no known material planning decision depends on an uninvestigated source. It does not mean loading the whole repository into the context window.
+
+## Conditional Routing
+
+After the mandatory context pass, classify each conditional child as `USE`, `REUSE`, `SKIP`, or `BLOCKED`.
+
+| Skill | `USE` trigger | `SKIP` trigger |
 |---|---|---|
-| `context-engineering` | falta contexto material sobre estado atual, padrões, dependências ou blast radius | contexto vigente já sustenta as decisões; faça apenas leitura direcionada |
-| `interview-me` | faltam usuário, objetivo, porquê, sucesso, restrição ou não escopo | pedido é concreto, mecânico ou já confirmado |
-| `idea-refine` | existe intenção, mas ainda há famílias de solução relevantes | abordagem e escopo já estão definidos |
-| `clarification-plan` | após investigação resta decisão material dependente do usuário | fato é pesquisável, decisão já está canonizada ou detalhe é local/reversível |
-| `spec-driven-development` | feature nova, mudança significativa ou critérios de aceite ausentes | correção pequena com comportamento inequívoco e spec suficiente |
-| `source-driven-development` | arquitetura/contrato depende de framework, biblioteca, versão ou recomendação oficial | decisão é independente de versão ou fonte já foi verificada e continua vigente |
-| `api-and-interface-design` | haverá API, schema, evento, módulo público ou boundary | implementação é interna e não muda contrato |
-| `documentation-and-adrs` | decisão é cara de reverter ou precisa sobreviver ao plano | decisão local, óbvia e reversível |
-| `planning-and-task-breakdown` | trabalho possui múltiplas unidades, dependências ou checkpoints | tarefa já é mínima, ordenada e verificável |
+| `interview-me` | Intended user, outcome, success, binding constraint, or out-of-scope boundary is still unclear | Intent is already explicit and confirmed |
+| `idea-refine` | Multiple materially different solution directions remain worth exploring | The desired direction is already concrete |
+| `clarification-plan` | A material human decision remains after facts were investigated | The answer is discoverable from code, docs, data, or an existing canonical decision |
+| `spec-driven-development` | New feature, significant change, or acceptance criteria are not yet explicit | A sufficient approved specification already exists |
+| `planning-and-task-breakdown` | Always before `PLAN_READY` | Never skipped; use the existing plan as input when it already contains tasks |
 
-## Grafo do planejamento
+Do not invoke a conditional skill merely because it exists.
 
-```text
-PEDIDO / PLANO EXISTENTE
-          ↓
-ANCORAR OBJETIVO E NÃO ESCOPO
-          ↓
-OBTER CONTEXTO PROPORCIONAL
-          ↓
-ROTEAR SKILLS DE DEFINE/PLAN
-          ↓
-REFINAR INTENÇÃO E SOLUÇÃO
-          ↓
-DECISÃO MATERIAL ABERTA?
-     ┌────┴────┐
-    sim       não
-     │         │
-clarification  ↓
-     │      SPEC / CONTRATOS
-     └──────▶  ↓
-          TASK BREAKDOWN
-               ↓
-       GATE DE SUFICIÊNCIA
-          ┌────┴────┐
-         falha     passa
-          │          │
-      voltar ao      ↓
-      ponto certo  PLAN_READY
-                     ↓
-                  PARAR
+## Planning Cycle
+
+1. **Anchor the request.** Preserve the original objective and accepted amendments. Separate requested scope from agent-proposed scope.
+2. **Run mandatory context engineering.**
+3. **Route conditional skills.** Show the routing table and concise reasons.
+4. **Clarify intent when needed.** Use `interview-me` before solution design.
+5. **Refine the solution space when needed.** Use `idea-refine`; do not force divergent exploration after the direction is settled.
+6. **Resolve material decisions.** Investigate first, then use `clarification-plan` only for genuine human choices.
+7. **Specify when needed.** Use the specification portions of `spec-driven-development`. Do not enter its implementation phase.
+8. **Decompose the approved direction.** Always load and apply `planning-and-task-breakdown`.
+9. **Audit plan sufficiency.** Return to the affected step only when a material gap remains.
+10. **Stop for human approval.** Never start implementation automatically.
+
+A repeated pass is justified only when it closes a material decision, adds relevant evidence, invalidates an assumption, or changes the plan. If a pass adds no material information, stop.
+
+## Decision-Complete Exit Condition
+
+The plan is ready when:
+
+- the objective, intended user, and observable success are explicit;
+- in-scope and out-of-scope boundaries are explicit;
+- no known critical or high-impact human decision remains open;
+- architecture and contracts needed by the task are specified;
+- assumptions and risks are visible;
+- acceptance criteria are testable;
+- tasks are ordered by dependency and have verification steps;
+- the plan identifies where implementation evidence must come from;
+- the user has reviewed the current plan version.
+
+Do not claim that context is literally complete or that future discoveries are impossible.
+
+## Persistent Artifacts
+
+Use an existing project convention when one exists. Otherwise maintain:
+
+- `tasks/plan.md` — versioned planning contract
+- `tasks/todo.md` — checkbox task list and human checkpoints
+- `tasks/state.md` — short anti-drift summary for session changes or compaction
+
+Minimum `tasks/state.md` fields:
+
+```markdown
+PLAN_VERSION:
+CURRENT_PHASE: PLAN
+OBJECTIVE:
+SUCCESS:
+IN_SCOPE:
+OUT_OF_SCOPE:
+OPEN_MATERIAL_DECISIONS:
+NEXT_HUMAN_CHECKPOINT:
 ```
 
-## Processo
+Increment `PLAN_VERSION` only when objective, scope, architecture, public contract, acceptance criteria, or critical ordering changes materially.
 
-### 1. Recupere o estado vigente
+## Output
 
-Leia primeiro o artefato canônico do projeto. Quando a convenção `tasks/` estiver em uso, leia nesta
-ordem:
+End with exactly one status:
 
-1. `tasks/state.md`;
-2. `tasks/plan.md`;
-3. `tasks/todo.md`;
-4. pedido atual e fontes citadas.
+- `STATUS: PLAN_READY`
+- `STATUS: DECISION_REQUIRED`
+- `STATUS: BLOCKED`
 
-Identifique a versão do plano e não trate resumo antigo como verdade sem conferir a fonte atual.
-
-### 2. Ancore a intenção
-
-Registre em linguagem direta:
-
-- objetivo final;
-- usuário/beneficiário;
-- sucesso observável;
-- restrição dominante;
-- escopo;
-- não escopo.
-
-Se algum desses campos mudar após entrevista, atualize a âncora antes de continuar.
-
-### 3. Construa contexto suficiente
-
-Use `context-engineering` com profundidade proporcional. Procure somente o que pode mudar decisões do
-plano:
-
-- docs canônicas e decisões existentes;
-- código e testes das superfícies afetadas;
-- dependências e versões;
-- contratos e integrações;
-- dados/runtime quando a tarefa depende do estado vivo;
-- implementações locais reutilizáveis.
-
-Contexto suficiente significa: nenhuma decisão material do plano depende de lacuna conhecida. Não
-significa ler o repositório inteiro.
-
-### 4. Rode o roteamento
-
-Classifique as skills permitidas como `USE`, `REUSE`, `SKIP` ou `BLOCKED`. Leia integralmente apenas
-as marcadas `USE`.
-
-### 5. Refine em ordem causal
-
-Ordem padrão, não obrigatória:
+For `PLAN_READY`, include:
 
 ```text
-interview-me
-   → idea-refine
-   → spec-driven-development
-   → source-driven-development / api-and-interface-design / ADRs
-   → clarification-plan quando decisão humana persistir
-   → planning-and-task-breakdown
-```
-
-Pule etapas sem trigger. Volte somente ao ponto invalidado por informação nova.
-
-### 6. Resolva decisões materiais
-
-Antes de chamar `clarification-plan`, investigue fatos e consulte decisões canônicas. Apresente uma
-decisão por vez por padrão. Após cada resposta:
-
-- registre a escolha e a razão;
-- atualize somente a parte afetada;
-- remova ramos descartados;
-- verifique se a resposta eliminou outras decisões;
-- continue até zero decisão material conhecida.
-
-### 7. Produza tarefas verificáveis
-
-Use `planning-and-task-breakdown` quando aplicável. Cada tarefa deve declarar:
-
-- entregável observável;
-- dependências;
-- critérios de aceite relacionados;
-- método de verificação;
-- escopo provável;
-- checkpoint humano quando necessário.
-
-Prefira slices verticais. Não imponha limite artificial de arquivos; divida quando a tarefa mistura
-objetivos ou não pode ser verificada isoladamente.
-
-### 8. Atualize os artefatos
-
-Crie ou atualize o sistema canônico do projeto. Sem outro sistema existente, use:
-
-- `tasks/plan.md`;
-- `tasks/todo.md`;
-- `tasks/state.md`.
-
-Mantenha checkboxes sem marcar; Planning não conclui trabalho de Build.
-
-## Gate de suficiência
-
-Antes de emitir `PLAN_READY`, confirme:
-
-- [ ] objetivo, usuário e sucesso observável estão confirmados;
-- [ ] escopo e não escopo estão explícitos;
-- [ ] contexto material e padrões existentes foram consultados;
-- [ ] zero decisão material conhecida permanece aberta;
-- [ ] contratos e interfaces afetados estão definidos;
-- [ ] premissas de alto impacto foram verificadas ou viraram pré-condições explícitas;
-- [ ] critérios de aceite são testáveis;
-- [ ] tarefas estão ordenadas por dependência;
-- [ ] cada tarefa possui método de verificação;
-- [ ] riscos, rollout e rollback relevantes estão descritos;
-- [ ] plano e checklist usam a mesma versão.
-
-Falha em um item retorna ao passo responsável. Não reinicie todo o processo.
-
-## Aprovação
-
-Ao terminar, apresente:
-
-```text
-STATUS: PLAN_READY
-PLAN_VERSION: <n>
-ARTEFATOS: <paths>
-SKILLS_USED: <lista>
-SKILLS_SKIPPED: <lista curta com motivo>
+PLAN_VERSION: <number>
 OPEN_MATERIAL_DECISIONS: 0
+CONTEXT_ENGINEERING: EXECUTED
+CHILD_SKILLS_USED: <names>
+CHILD_SKILLS_SKIPPED: <names with reasons>
+ARTIFACTS_UPDATED: <paths>
+NEXT_ACTION: Human review and explicit approval. Do not start guto-build.
 ```
 
-Peça aprovação explícita da versão. Não escreva `PLAN_APPROVED` em nome do usuário e não inicie
-implementação.
+## Verification
 
-## Saídas válidas
-
-- `PLAN_READY`: plano consolidado aguardando aprovação;
-- `DECISION_REQUIRED`: uma decisão material foi apresentada e aguarda resposta;
-- `INVESTIGATION_REQUIRED`: falta evidência para planejar honestamente;
-- `BLOCKED`: dependência externa nominal impede fechar o plano.
-
-## Red flags
-
-- editar código durante Planning;
-- carregar todas as skills disponíveis;
-- entrevistar quando o pedido já é inequívoco;
-- perguntar sobre fato pesquisável;
-- fechar spec antes de obter contexto material;
-- criar plano com “descobrir depois”, “conforme necessário” ou critérios subjetivos;
-- decompor o mesmo plano repetidamente sem nova evidência;
-- iniciar Build depois de `PLAN_READY` sem nova invocação e aprovação humana.
+- [ ] The local `context-engineering` skill was read and executed first
+- [ ] Only the exact child-skill set in this file was considered
+- [ ] Every conditional skill has a recorded routing decision
+- [ ] Questions were limited to material human decisions after investigation
+- [ ] Product code was not modified
+- [ ] `tasks/plan.md`, `tasks/todo.md`, and `tasks/state.md` are coherent
+- [ ] `planning-and-task-breakdown` was applied before `PLAN_READY`
+- [ ] The phase stopped for human approval

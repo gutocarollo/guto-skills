@@ -6,8 +6,8 @@
   "plugins": [
     {
       "name": "guto-skills",
-      "version": "0.1.0",
-      "description": "Conditional plan, build, verify, and review orchestration with human checkpoints.",
+      "version": "0.2.0",
+      "description": "Four phase-scoped engineering orchestrators with vendored Agent Skills.",
       "source": {
         "source": "local",
         "path": "./"
