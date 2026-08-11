@@ -1,4 +1,12 @@
 {
+  "adapted_files": {
+    "skills/context-engineering/SKILL.md": {
+      "adaptation": "Preserves upstream context curation while adding mandatory lexical plus CodeGraph exploration, iterative convergence, focused reads, and conditional live-state evidence.",
+      "local_sha": "20a46454618f28f1414c881df9b1fed28d2904ca",
+      "mode": "100644",
+      "upstream_sha": "be991103fe2b13f7e5f6f5da9d3c6029ad30ac64"
+    }
+  },
   "files": {
     "references/definition-of-done.md": {
       "mode": "100644",
@@ -23,10 +31,6 @@
     "skills/code-simplification/SKILL.md": {
       "mode": "100644",
       "sha": "239b2848489511de30d9e63b0bd183adc4b01347"
-    },
-    "skills/context-engineering/SKILL.md": {
-      "mode": "100644",
-      "sha": "be991103fe2b13f7e5f6f5da9d3c6029ad30ac64"
     },
     "skills/debugging-and-error-recovery/SKILL.md": {
       "mode": "100644",
@@ -81,7 +85,7 @@
       "sha": "569d22321469770385b1ff89bf69f498f2202bc6"
     }
   },
-  "schema_version": 1,
+  "schema_version": 2,
   "source": {
     "commit": "7676817c12a1317454ae3898a0c5c1eacf5dd3d5",
     "license": "MIT",

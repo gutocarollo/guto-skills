@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Validate the clean Guto Skills package.
+"""Validate the Guto Skills package.
 
-The default mode validates the complete checked-out repository, including the
-byte-for-byte upstream lock.  ``--custom-only`` is intended for maintainers who
-are drafting the original Guto files before the vendored tree has been
-materialized locally.
+The default mode validates the complete checked-out repository, including
+byte-for-byte upstream files and explicitly tracked local adaptations.
+``--custom-only`` validates the original/adapted Guto surfaces without requiring
+the complete vendored tree.
 """
 
 from __future__ import annotations
@@ -91,6 +91,7 @@ CUSTOM_ENGLISH_PATHS = [
     "skills/guto-verify/SKILL.md",
     "skills/guto-review/SKILL.md",
     "skills/clarification-plan/SKILL.md",
+    "skills/context-engineering/SKILL.md",
     *MANIFEST_PATHS,
 ]
 
@@ -127,6 +128,12 @@ FRONTMATTER_RE = re.compile(r"\A---\n(?P<header>.*?)\n---\n", re.DOTALL)
 NAME_RE = re.compile(r"^name:\s*([^\n]+)\s*$", re.MULTILINE)
 DESCRIPTION_RE = re.compile(r"^description:\s*(.+)$", re.MULTILINE)
 CHILD_LINK_RE = re.compile(r"\.\./([a-z0-9-]+)/SKILL\.md")
+
+UPSTREAM_REPOSITORY = "https://github.com/addyosmani/agent-skills"
+UPSTREAM_COMMIT = "7676817c12a1317454ae3898a0c5c1eacf5dd3d5"
+ADAPTED_UPSTREAM_EXPECTED = {
+    "skills/context-engineering/SKILL.md": "be991103fe2b13f7e5f6f5da9d3c6029ad30ac64",
+}
 
 
 def git_blob_sha(data: bytes) -> str:
@@ -197,7 +204,7 @@ def validate_exact_skill_tree(errors: list[str], custom_only: bool) -> None:
     expected = CUSTOM_SKILLS if custom_only else EXACT_SKILLS
 
     missing = sorted(expected - actual)
-    extra = sorted(actual - (EXACT_SKILLS if not custom_only else EXACT_SKILLS))
+    extra = sorted(actual - EXACT_SKILLS)
 
     if missing:
         errors.append(f"missing skill directories: {', '.join(missing)}")
@@ -230,12 +237,7 @@ def validate_orchestrators(errors: list[str], custom_only: bool) -> None:
             errors.append(f"{orchestrator} does not state mandatory context engineering")
 
         if orchestrator == "guto-review":
-            required_review_phrases = [
-                "fresh independent",
-                "context_gap_audit",
-                "omitted_or_stale_context",
-            ]
-            for phrase in required_review_phrases:
+            for phrase in ["fresh independent", "context_gap_audit", "omitted_or_stale_context"]:
                 if phrase not in lower:
                     errors.append(f"guto-review missing context-gap rule: {phrase}")
 
@@ -249,6 +251,26 @@ def validate_orchestrators(errors: list[str], custom_only: bool) -> None:
                 sibling = SKILLS_DIR / name / "SKILL.md"
                 if not sibling.is_file():
                     errors.append(f"{orchestrator} child skill is not vendored locally: skills/{name}/SKILL.md")
+
+
+def validate_context_engineering(errors: list[str]) -> None:
+    path = SKILLS_DIR / "context-engineering" / "SKILL.md"
+    text = read_text(path, errors)
+    if not text:
+        return
+    lower = text.lower()
+    required_phrases = [
+        "lexical search — always attempt",
+        "codegraph — always attempt",
+        "exploration loop",
+        "material gap left?",
+        "context pack contract",
+        "lexical-only and graph-only",
+        "task shape changes ordering, not inclusion",
+    ]
+    for phrase in required_phrases:
+        if phrase not in lower:
+            errors.append(f"context-engineering missing exploration contract: {phrase}")
 
 
 def validate_english_custom_files(errors: list[str]) -> None:
@@ -322,6 +344,13 @@ def validate_manifests(errors: list[str]) -> None:
         errors.append(f"manifest versions do not match: {versions}")
 
 
+def validate_mode(path: Path, expected_mode: str | None, relative: str, errors: list[str]) -> None:
+    executable = bool(path.stat().st_mode & stat.S_IXUSR)
+    actual_mode = "100755" if executable else "100644"
+    if expected_mode != actual_mode:
+        errors.append(f"upstream mode mismatch for {relative}: {actual_mode} != {expected_mode}")
+
+
 def validate_upstream_lock(errors: list[str]) -> int:
     lock_path = ROOT / "UPSTREAM_LOCK.json"
     text = read_text(lock_path, errors)
@@ -335,9 +364,9 @@ def validate_upstream_lock(errors: list[str]) -> int:
         return 0
 
     source = lock.get("source", {})
-    if source.get("repository") != "https://github.com/addyosmani/agent-skills":
+    if source.get("repository") != UPSTREAM_REPOSITORY:
         errors.append("UPSTREAM_LOCK source repository mismatch")
-    if source.get("commit") != "7676817c12a1317454ae3898a0c5c1eacf5dd3d5":
+    if source.get("commit") != UPSTREAM_COMMIT:
         errors.append("UPSTREAM_LOCK commit is not the reviewed pinned commit")
     if source.get("license") != "MIT":
         errors.append("UPSTREAM_LOCK license mismatch")
@@ -346,6 +375,15 @@ def validate_upstream_lock(errors: list[str]) -> int:
     if not isinstance(files, dict):
         errors.append("UPSTREAM_LOCK files must be an object")
         return 0
+
+    adapted = lock.get("adapted_files", {})
+    if not isinstance(adapted, dict):
+        errors.append("UPSTREAM_LOCK adapted_files must be an object")
+        adapted = {}
+
+    overlap = set(files) & set(adapted)
+    if overlap:
+        errors.append(f"UPSTREAM_LOCK paths cannot be both exact and adapted: {sorted(overlap)}")
 
     for relative, metadata in sorted(files.items()):
         path = ROOT / relative
@@ -357,14 +395,40 @@ def validate_upstream_lock(errors: list[str]) -> int:
         expected_sha = metadata.get("sha") if isinstance(metadata, dict) else None
         if actual_sha != expected_sha:
             errors.append(f"upstream blob hash mismatch for {relative}: {actual_sha} != {expected_sha}")
-
         expected_mode = metadata.get("mode") if isinstance(metadata, dict) else None
-        executable = bool(path.stat().st_mode & stat.S_IXUSR)
-        actual_mode = "100755" if executable else "100644"
-        if expected_mode != actual_mode:
-            errors.append(f"upstream mode mismatch for {relative}: {actual_mode} != {expected_mode}")
+        validate_mode(path, expected_mode, relative, errors)
 
-    return len(files)
+    if set(adapted) != set(ADAPTED_UPSTREAM_EXPECTED):
+        errors.append(
+            "UPSTREAM_LOCK adapted file set mismatch: "
+            f"expected {sorted(ADAPTED_UPSTREAM_EXPECTED)}, got {sorted(adapted)}"
+        )
+
+    for relative, metadata in sorted(adapted.items()):
+        path = ROOT / relative
+        if not path.is_file():
+            errors.append(f"adapted upstream file missing: {relative}")
+            continue
+        if not isinstance(metadata, dict):
+            errors.append(f"adapted upstream metadata must be an object: {relative}")
+            continue
+        expected_upstream = ADAPTED_UPSTREAM_EXPECTED.get(relative)
+        if metadata.get("upstream_sha") != expected_upstream:
+            errors.append(
+                f"adapted upstream source mismatch for {relative}: "
+                f"{metadata.get('upstream_sha')} != {expected_upstream}"
+            )
+        actual_local = git_blob_sha(path.read_bytes())
+        if metadata.get("local_sha") != actual_local:
+            errors.append(
+                f"adapted local blob hash mismatch for {relative}: "
+                f"{actual_local} != {metadata.get('local_sha')}"
+            )
+        validate_mode(path, metadata.get("mode"), relative, errors)
+        if not str(metadata.get("adaptation") or "").strip():
+            errors.append(f"adapted upstream file missing adaptation note: {relative}")
+
+    return len(files) + len(adapted)
 
 
 def validate_links(errors: list[str]) -> None:
@@ -400,13 +464,14 @@ def main() -> int:
     parser.add_argument(
         "--custom-only",
         action="store_true",
-        help="validate original Guto files without requiring the vendored upstream tree",
+        help="validate original/adapted Guto files without requiring the complete vendored tree",
     )
     args = parser.parse_args()
 
     errors: list[str] = []
     validate_exact_skill_tree(errors, args.custom_only)
     validate_orchestrators(errors, args.custom_only)
+    validate_context_engineering(errors)
     validate_english_custom_files(errors)
     validate_no_council_contract(errors)
     validate_manifests(errors)
@@ -424,10 +489,10 @@ def main() -> int:
         return 1
 
     if args.custom_only:
-        print("PASSED: custom English orchestrators, exact child-skill scopes, and manifests")
+        print("PASSED: custom/adapted English skills, exact child scopes, exploration contract, and manifests")
     else:
         print(
-            f"PASSED: {len(EXACT_SKILLS)} skills, {locked_files} pinned upstream files, "
+            f"PASSED: {len(EXACT_SKILLS)} skills, {locked_files} pinned/adapted upstream files, "
             f"{len(MANIFEST_PATHS)} manifests, 0 errors"
         )
     return 0

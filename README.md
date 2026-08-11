@@ -76,20 +76,41 @@ Conditionally:
 
 The review context pass explicitly searches for relevant code, contracts, consumers, tests, and architecture that Planning or Build may have omitted.
 
-## Why Context Engineering Is Mandatory
+## Context Engineering and Codebase Exploration
 
 Project context is larger than the useful attention budget. Every phase therefore starts by loading and executing the local `context-engineering` skill.
 
-The goal is not to inject the entire repository. The goal is to route the agent to the smallest cohesive set of current code, documentation, tests, contracts, runtime evidence, and project decisions needed for the phase.
+The repository is treated as a search space and the model context window as a delivery surface. The exploration model is:
 
-A previous context pack is input, never a substitute:
+```text
+anchor search question
+        ↓
+canonical docs / rules
+        ↓
+lexical search + CodeGraph
+        ↓
+join candidates
+        ↓
+focused code / tests / contracts
+        ↓
+live state or data when materially required
+        ↓
+material gap left?
+   yes ↺        no → cohesive context pack
+```
 
-- Planning needs context to produce the right plan.
-- Build needs refreshed context because code and dependencies may have changed.
-- Verify needs context to map claims to real proof surfaces.
-- Review needs an independent context reconstruction to find omitted impact and stale assumptions.
+Two codebase discovery lanes are always attempted:
 
-## Vendored Skills
+- **Lexical search** — `rg`, `grep`, or the runtime equivalent for symbols, strings, config, SQL, docs, tests, and other text.
+- **CodeGraph** — semantic and transitive relationships such as definitions, callers, consumers, imports, and blast radius.
+
+Task shape changes the ordering, not whether those two lanes are attempted. For example, lexical enumeration starts with text search, known-symbol impact can run lexical and graph discovery independently before joining, and dynamic state flow proves a local event/state path before expanding outward through the graph.
+
+Search outputs are candidate discovery, not proof. The skill reconciles lexical-only and graph-only findings through focused reads, then repeats only when new evidence exposes a material relationship or unresolved question.
+
+The goal is **broad enough discovery, narrow context delivery**. A previous context pack is a search seed, never a substitute for a fresh phase-specific pass.
+
+## Vendored and Adapted Skills
 
 The selected Agent Skills are stored directly under `skills/`. The orchestrators resolve local sibling files such as:
 
@@ -103,7 +124,7 @@ skills/incremental-implementation/SKILL.md
 
 An orchestrator must read the complete local child `SKILL.md` before invoking it. If the file is absent, the phase returns `BLOCKED`; there is no silent external or remembered fallback.
 
-The vendored snapshot is pinned in [`UPSTREAM_LOCK.json`](UPSTREAM_LOCK.json). See [`NOTICE.md`](NOTICE.md) for attribution and licensing.
+Most vendored files remain byte-for-byte pinned to the reviewed Agent Skills commit. `context-engineering` is intentionally adapted in this repository to add the lightweight exploration loop while preserving the upstream context-curation purpose. Exact upstream and local blob identities are recorded in [`UPSTREAM_LOCK.json`](UPSTREAM_LOCK.json). See [`NOTICE.md`](NOTICE.md) for attribution and licensing.
 
 ## Skills Tree
 
@@ -143,6 +164,12 @@ tasks/
 ```
 
 Material discoveries return to `guto-plan`. Local reversible implementation details remain in `guto-build`.
+
+## Branch Profiles
+
+`main` is the repository-agnostic profile and must remain usable in arbitrary codebases.
+
+Project-specific exploration policies may live on dedicated branches derived from `main`, so specialized repositories can add domain sources without contaminating the generic profile.
 
 ## Install
 
@@ -202,9 +229,9 @@ The validator checks:
 - the exact child-skill set for each `guto-*` skill;
 - mandatory `context-engineering` in all four phases;
 - local child paths;
-- English custom files;
+- English custom/adapted files;
 - frontmatter and manifest consistency;
-- pinned upstream Git blob hashes;
+- byte-for-byte pinned upstream files plus tracked local adaptations;
 - absence of inherited Orion's Belt Council contracts.
 
 Hosted CI is not enabled by default. Run the validator locally or from the target project's existing CI runner.
@@ -215,9 +242,9 @@ This repository intentionally does not include:
 
 - a Delivery Council;
 - automatic subagent swarms;
-- mandatory code graphs, ledgers, hooks, scores, or graph-edge identifiers;
+- graph evidence ledgers, lifecycle receipts, scoring systems, graph-edge identifiers, or a context state machine;
 - automatic transition between phases;
 - automatic merge, push, or deployment;
 - unrelated Agent Skills outside the exact composition above.
 
-Capabilities from Orion's Belt may be ported later only when they solve a measured problem without turning the normal path into a high-assurance Council.
+The exploration loop is a reasoning workflow, not a gate machine. Capabilities from Orion's Belt are ported only when they improve context quality without recreating high-assurance orchestration overhead.
