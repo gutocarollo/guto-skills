@@ -1,8 +1,8 @@
 {
   "adapted_files": {
     "skills/context-engineering/SKILL.md": {
-      "adaptation": "Preserves upstream context curation while adding mandatory lexical plus CodeGraph exploration, iterative convergence, focused reads, and conditional live-state evidence.",
-      "local_sha": "20a46454618f28f1414c881df9b1fed28d2904ca",
+      "adaptation": "Preserves upstream context curation while adding mandatory lexical plus CodeGraph exploration, LLM materiality filtering, explicit exploration-anchor promotion, direct fan-out from known anchors, iterative convergence, focused reads, and conditional live-state evidence.",
+      "local_sha": "d2590846f755f531e2a26bfe3ba0dadfd7c22ba6",
       "mode": "100644",
       "upstream_sha": "be991103fe2b13f7e5f6f5da9d3c6029ad30ac64"
     }
