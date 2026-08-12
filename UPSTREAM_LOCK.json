@@ -1,8 +1,8 @@
 {
   "adapted_files": {
     "skills/context-engineering/SKILL.md": {
-      "adaptation": "MakersHub branch profile: preserves upstream context curation while adding mandatory lexical plus CodeGraph exploration everywhere and mandatory FazGraph exploration for makershub, airflow, and salesforce, with iterative convergence, focused reads, and conditional live-state evidence.",
-      "local_sha": "f294177e6c9155968c6766edb3c69f25130989ac",
+      "adaptation": "MakersHub branch profile: preserves upstream context curation while adding mandatory lexical plus CodeGraph exploration everywhere, mandatory FazGraph exploration for makershub/airflow/salesforce, LLM materiality filtering, explicit exploration-anchor promotion, direct multi-source fan-out from known anchors, iterative convergence, focused reads, and conditional live-state evidence.",
+      "local_sha": "3997c4731d9252c11bcb2b0246a5e1238f837e80",
       "mode": "100644",
       "upstream_sha": "be991103fe2b13f7e5f6f5da9d3c6029ad30ac64"
     }
