@@ -47,33 +47,11 @@ VENDORED_SKILLS = {
 
 EXACT_SKILLS = CUSTOM_SKILLS | VENDORED_SKILLS
 
-ORCHESTRATOR_ORDER = {
-    "guto-plan": [
-        "context-engineering",
-        "interview-me",
-        "idea-refine",
-        "clarification-plan",
-        "spec-driven-development",
-        "planning-and-task-breakdown",
-    ],
-    "guto-build": [
-        "context-engineering",
-        "planning-and-task-breakdown",
-        "source-driven-development",
-        "incremental-implementation",
-    ],
-    "guto-verify": [
-        "context-engineering",
-        "browser-testing-with-devtools",
-        "debugging-and-error-recovery",
-    ],
-    "guto-review": [
-        "context-engineering",
-        "code-review-and-quality",
-        "code-simplification",
-        "security-and-hardening",
-        "performance-optimization",
-    ],
+GUTO_NODES = {
+    "guto-plan",
+    "guto-build",
+    "guto-verify",
+    "guto-review",
 }
 
 MANIFEST_PATHS = [
@@ -216,38 +194,22 @@ def validate_exact_skill_tree(errors: list[str], custom_only: bool) -> None:
 
 
 def validate_orchestrators(errors: list[str], custom_only: bool) -> None:
-    for orchestrator, expected_order in ORCHESTRATOR_ORDER.items():
+    for orchestrator in sorted(GUTO_NODES):
         path = SKILLS_DIR / orchestrator / "SKILL.md"
         text = read_text(path, errors)
         if not text:
             continue
 
-        links = unique_in_order(CHILD_LINK_RE.findall(text))
-        if links != expected_order:
+        links = set(CHILD_LINK_RE.findall(text))
+        missing_nodes = sorted(GUTO_NODES - links)
+        if missing_nodes:
             errors.append(
-                f"{orchestrator} child-skill order/scope mismatch: "
-                f"expected {expected_order}, got {links}"
+                f"{orchestrator} does not expose all composable Guto nodes: "
+                f"missing {missing_nodes}"
             )
 
-        if "context-engineering" not in links or links[0] != "context-engineering":
-            errors.append(f"{orchestrator} must call context-engineering first")
-
-        lower = text.lower()
-        if "mandatory" not in lower or "context-engineering" not in lower:
-            errors.append(f"{orchestrator} does not state mandatory context engineering")
-
-        if orchestrator == "guto-review":
-            for phrase in ["fresh independent", "context_gap_audit", "omitted_or_stale_context"]:
-                if phrase not in lower:
-                    errors.append(f"guto-review missing context-gap rule: {phrase}")
-
-        if orchestrator == "guto-build":
-            first_positions = [text.find(f"../{name}/SKILL.md") for name in expected_order]
-            if any(position < 0 for position in first_positions) or first_positions != sorted(first_positions):
-                errors.append("guto-build does not preserve the required fixed child-skill order")
-
         if not custom_only:
-            for name in expected_order:
+            for name in links:
                 sibling = SKILLS_DIR / name / "SKILL.md"
                 if not sibling.is_file():
                     errors.append(f"{orchestrator} child skill is not vendored locally: skills/{name}/SKILL.md")
@@ -489,7 +451,7 @@ def main() -> int:
         return 1
 
     if args.custom_only:
-        print("PASSED: custom/adapted English skills, exact child scopes, exploration contract, and manifests")
+        print("PASSED: custom/adapted English skills, composable Guto nodes, exploration contract, and manifests")
     else:
         print(
             f"PASSED: {len(EXACT_SKILLS)} skills, {locked_files} pinned/adapted upstream files, "

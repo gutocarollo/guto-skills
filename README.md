@@ -1,84 +1,25 @@
 # Guto Skills
 
-Four phase-scoped orchestration skills built on a deliberately small, vendored subset of [`addyosmani/agent-skills`](https://github.com/addyosmani/agent-skills).
+Four composable orchestration skills built on a deliberately small, vendored subset of [`addyosmani/agent-skills`](https://github.com/addyosmani/agent-skills).
 
-The package keeps a master plan, refreshes context at every phase, selects only the skills explicitly assigned to that phase, and stops for human audit before advancing.
+## Composition
 
-## Lifecycle
+`guto-plan`, `guto-build`, `guto-verify`, and `guto-review` are graph nodes, not lifecycle gates. Any Guto skill may invoke any other Guto skill, including itself, whenever the active objective benefits from it. Callers may form forward paths, feedback loops, fan-in, fan-out, or targeted re-entry; no human approval, status, prior phase, or fixed order is required to cross an edge.
 
-```text
-guto-plan
-    │  PLAN_READY + human approval
-    ▼
-guto-build
-    │  BUILD_READY_FOR_VERIFY + human audit
-    ▼
-guto-verify
-    │  VERIFIED + human audit
-    ▼
-guto-review
-    │
-    └── MERGE_READY still requires a human merge decision
-```
+The caller owns the loop policy: it chooses the objective, exit condition, iteration budget, and evidence to retain. A Guto skill returns a useful state snapshot but never forces a stop or a next action. The skills may load any vendored skill that is relevant to their current node; listed skills are capabilities, not an allowlist or required sequence.
 
-No phase invokes the next phase automatically.
+Each node keeps its natural responsibility:
 
-## Exact Composition
+- `guto-plan` models objectives, decisions, contracts, and work slices.
+- `guto-build` mutates the target and records implementation evidence.
+- `guto-verify` collects or refreshes evidence and diagnoses discrepancies.
+- `guto-review` independently evaluates the current artifact and can route directly to any node.
 
-### `guto-plan`
-
-Always:
-
-- `context-engineering`
-- `planning-and-task-breakdown` before `PLAN_READY`
-
-Conditionally:
-
-- `interview-me`
-- `idea-refine`
-- `clarification-plan`
-- `spec-driven-development`
-
-### `guto-build`
-
-Always, in this order:
-
-1. `context-engineering`
-2. `planning-and-task-breakdown`
-3. `source-driven-development`
-4. `incremental-implementation`
-
-### `guto-verify`
-
-Always:
-
-- `context-engineering`
-
-Conditionally:
-
-- `browser-testing-with-devtools` for browser claims
-- `debugging-and-error-recovery` after a failed or unexpected verification result
-
-Project-native test, build, typecheck, lint, query, and runtime commands are executed as evidence; no generic testing skill is added.
-
-### `guto-review`
-
-Always:
-
-- a fresh independent `context-engineering` pass
-- `code-review-and-quality`
-
-Conditionally:
-
-- `code-simplification`
-- `security-and-hardening`
-- `performance-optimization`
-
-The review context pass explicitly searches for relevant code, contracts, consumers, tests, and architecture that Planning or Build may have omitted.
+This preserves useful evidence while allowing flows such as `plan → build → verify → build → verify → review → plan`, direct `review → build`, and concurrent branches that later join at `verify` or `review`.
 
 ## Context Engineering and Codebase Exploration
 
-Project context is larger than the useful attention budget. Every phase therefore starts by loading and executing the local `context-engineering` skill.
+Project context is larger than the useful attention budget. A graph node may load the local `context-engineering` skill whenever fresh discovery materially improves its next action.
 
 The repository is treated as a search space and the model context window as a delivery surface. The exploration model is:
 
@@ -163,7 +104,7 @@ tasks/
 └── state.md  # short anti-drift state for session changes or compaction
 ```
 
-Material discoveries return to `guto-plan`. Local reversible implementation details remain in `guto-build`.
+Material discoveries may route to whichever Guto node can resolve them; local reversible implementation details may remain in the current node.
 
 ## Branch Profiles
 
@@ -199,22 +140,22 @@ codex plugin add guto-skills@guto-skills
 
 ```text
 @guto-plan
-Plan this change from the real repository context. Refine material decisions with me and stop at PLAN_READY.
+Model this change, then call any Guto node that advances the objective.
 ```
 
 ```text
 @guto-build
-Implement the explicitly approved PLAN_VERSION. Update evidence-backed checkboxes and stop at BUILD_READY_FOR_VERIFY.
+Implement the current slice, then route to the most useful Guto node.
 ```
 
 ```text
 @guto-verify
-Prove the current implementation against every acceptance criterion and stop before Review.
+Refresh the evidence for the current artifact and route failures or gaps directly.
 ```
 
 ```text
 @guto-review
-Run a fresh context-gap audit and review the verified change for merge readiness.
+Review the current artifact and route findings to any Guto node.
 ```
 
 ## Validate
@@ -226,8 +167,7 @@ python3 scripts/validate_skills.py
 The validator checks:
 
 - the exact skill inventory;
-- the exact child-skill set for each `guto-*` skill;
-- mandatory `context-engineering` in all four phases;
+- local Guto-to-Guto composition references;
 - local child paths;
 - English custom/adapted files;
 - frontmatter and manifest consistency;
@@ -238,13 +178,4 @@ Hosted CI is not enabled by default. Run the validator locally or from the targe
 
 ## Design Boundary
 
-This repository intentionally does not include:
-
-- a Delivery Council;
-- automatic subagent swarms;
-- graph evidence ledgers, lifecycle receipts, scoring systems, graph-edge identifiers, or a context state machine;
-- automatic transition between phases;
-- automatic merge, push, or deployment;
-- unrelated Agent Skills outside the exact composition above.
-
-The exploration loop is a reasoning workflow, not a gate machine. Capabilities from Orion's Belt are ported only when they improve context quality without recreating high-assurance orchestration overhead.
+This repository supplies composable skill prompts, not a runtime scheduler. It does not impose a graph shape, status gate, approval gate, transition policy, merge policy, or deployment policy. An external orchestrator may supply those policies when useful.
