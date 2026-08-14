@@ -17,17 +17,30 @@ Each node keeps its natural responsibility:
 
 This preserves useful evidence while allowing flows such as `plan → build → verify → build → verify → review → plan`, direct `review → build`, and concurrent branches that later join at `verify` or `review`.
 
-A caller may implement the Gauntlet-Guto three-cycle policy without changing these nodes:
+## Gauntlet Pre-Plan
+
+A Gauntlet Loop starts before executable planning. `guto-plan` receives the goal plus optional references, selects the strongest concrete quality bar that an agent can inspect, and emits a compact pre-plan artifact containing:
+
+- `GOAL` — the original objective without weakening its success condition.
+- `REFERENCE_LOCATORS` — every supplied or discovered reference that remains relevant, including those not selected as the primary bar.
+- `QUALITY_BAR` — one sentence naming the inspectable reference or measurement and its win rule, such as blind preference over the reference or `p95 <= 200 ms`.
+- `GAUNTLET_RUN_PROMPT` — a short prompt for a fresh Claude Code or Codex lead agent that carries the goal, bar, and relevant reference locators.
+
+The generated prompt is not the plan. It is the input that gives rise to the plan in a fresh context. The new lead agent chooses the approach and decomposition, writes the executable plan, maintains a simple live progress page, and orchestrates builder/critic loops against the bar. The pre-plan artifact should use the target project's planning convention; otherwise persist it at `tasks/gauntlet.md` and pass it by reference in `GRAPH_HANDOFF`.
+
+One non-normative arrangement is:
 
 ```text
-Cycle 1  idea-refine ↔ interview-me/clarification-plan → MetaPrompt
-Cycle 2  fresh agent → clarification-plan ↔ planning-and-task-breakdown → plan review
-Cycle 3  guto-build → guto-verify → guto-review
-                           ↑              │
-                           └── blockers ──┘     non-blockers → backlog
+Cycle 1  GOAL + optional references → guto-plan pre-plan → QUALITY_BAR + GAUNTLET_RUN_PROMPT
+Cycle 2  fresh agent + generated prompt → clarification-plan ↔ planning-and-task-breakdown → plan
+Cycle 3  lead-selected Guto graph → inspect real output against the bar → next best edge
 ```
 
-The first two cycles may keep explicit human handoffs. Once Cycle 3 is activated, the graph crosses ordinary Guto edges automatically until its evidence-based exit condition, pause, or authority boundary is reached.
+The diagram is an example, not a lifecycle contract. The lead or caller may skip, reorder, branch, join, or re-enter any Guto node after planning; there is no required `build → verify → review` sequence.
+
+For each important piece that can be improved and judged independently, the lead agent fans out a builder and a separate critic with fresh context. The critic inspects the real artifact, compares it directly with the bar, uses blind A/B comparison when possible, returns the largest remaining gap, and repeats until the output wins or the caller stops the run. Coupled pieces stay under a sequential owner until they can be judged independently; fan-out is a tool, not a quota.
+
+`context_policy: fresh` is an execution instruction to the external caller or runtime. It is the only exception to inline graph traversal: dispatch the selected node in a new context and pass the artifact reference instead of continuing in the current conversation. If the runtime cannot create a fresh context, it must say so rather than claiming independent review.
 
 ## Context Engineering and Codebase Exploration
 
@@ -111,6 +124,7 @@ Use the target project's existing planning convention when it has one. Otherwise
 
 ```text
 tasks/
+├── gauntlet.md # optional pre-plan quality bar and generated runner prompt
 ├── plan.md   # approved, versioned planning contract
 ├── todo.md   # checkboxes and evidence-backed progress
 └── state.md  # short anti-drift state for session changes or compaction

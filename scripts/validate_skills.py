@@ -20,6 +20,7 @@ from typing import Iterable
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS_DIR = ROOT / "skills"
+PACKAGE_VERSION = "0.3.0"
 
 CUSTOM_SKILLS = {
     "guto-plan",
@@ -83,6 +84,15 @@ FORBIDDEN_COUNCIL_TOKENS = {
     "agent_swarm_ledger",
     "execution-graph",
     "DELIVERY-COUNCIL",
+}
+
+STALE_MANIFEST_PHRASES = {
+    "phase-scoped",
+    "mandatory context engineering",
+    "exact vendored child-skill set",
+    "explicit human checkpoints",
+    "stops for human audit",
+    "explicitly invoked engineering phases",
 }
 
 PORTUGUESE_MARKERS = {
@@ -247,6 +257,44 @@ def validate_context_engineering(errors: list[str]) -> None:
             errors.append(f"context-engineering missing exploration contract: {phrase}")
 
 
+def validate_gauntlet_contract(errors: list[str]) -> None:
+    required_by_path = {
+        "README.md": [
+            "gauntlet pre-plan",
+            "quality_bar",
+            "gauntlet_run_prompt",
+            "reference_locators",
+            "win rule",
+            "context_policy: fresh",
+            "blind a/b comparison",
+            "live progress page",
+            "non-normative",
+        ],
+        "skills/guto-plan/SKILL.md": [
+            "gauntlet pre-plan mode",
+            "quality_bar",
+            "gauntlet_run_prompt",
+            "reference_locator",
+            "deterministic win rule",
+            "context_policy: fresh",
+            "fresh planning agent",
+            "blind a/b comparison",
+            "subagents and ultracode",
+            "live progress page",
+            "sequential owner",
+        ],
+    }
+    for relative, phrases in required_by_path.items():
+        text = read_text(ROOT / relative, errors).lower()
+        for phrase in phrases:
+            if phrase not in text:
+                errors.append(f"Gauntlet contract missing from {relative}: {phrase}")
+
+    readme = read_text(ROOT / "README.md", errors).lower()
+    if "default gauntlet-guto policy" in readme:
+        errors.append("Gauntlet example must not be declared as a fixed default policy")
+
+
 def validate_english_custom_files(errors: list[str]) -> None:
     for relative in CUSTOM_ENGLISH_PATHS:
         path = ROOT / relative
@@ -313,6 +361,15 @@ def validate_manifests(errors: list[str]) -> None:
             errors.append(f"manifest version missing: {relative}")
         else:
             versions[relative] = version
+            if version != PACKAGE_VERSION:
+                errors.append(
+                    f"manifest version must be {PACKAGE_VERSION}: {relative} has {version}"
+                )
+
+        lower = text.lower()
+        for phrase in sorted(STALE_MANIFEST_PHRASES):
+            if phrase in lower:
+                errors.append(f"stale non-composable manifest phrase in {relative}: {phrase}")
 
     if versions and len(set(versions.values())) != 1:
         errors.append(f"manifest versions do not match: {versions}")
@@ -446,6 +503,7 @@ def main() -> int:
     validate_exact_skill_tree(errors, args.custom_only)
     validate_orchestrators(errors, args.custom_only)
     validate_context_engineering(errors)
+    validate_gauntlet_contract(errors)
     validate_english_custom_files(errors)
     validate_no_council_contract(errors)
     validate_manifests(errors)

@@ -1,7 +1,7 @@
 {
   "name": "guto-skills",
-  "version": "0.2.0",
-  "description": "Phase-scoped engineering orchestration with mandatory context engineering and vendored Agent Skills.",
+  "version": "0.3.0",
+  "description": "Composable engineering graph orchestration with Gauntlet pre-planning and vendored Agent Skills.",
   "author": {
     "name": "Augusto Carollo",
     "url": "https://github.com/gutocarollo"
@@ -13,7 +13,7 @@
   "interface": {
     "displayName": "Guto Skills",
     "shortDescription": "Plan, build, verify, and review with focused local context.",
-    "longDescription": "Guto Skills provides four explicitly invoked engineering phases. Each phase starts with context engineering, calls only its exact vendored child-skill set, persists the master plan, and stops for human audit.",
+    "longDescription": "Guto Skills provides four freely composable graph nodes. Guto Plan can turn a goal and inspectable quality bar into a concise Gauntlet prompt for a fresh planning agent, while callers retain control of routing, pauses, and exit conditions.",
     "developerName": "Augusto Carollo",
     "category": "Productivity",
     "capabilities": [
@@ -23,6 +23,7 @@
     ],
     "defaultPrompt": [
       "Use guto-plan to create an approved implementation plan from the real repository context",
+      "Use guto-plan to generate a concise Gauntlet prompt and quality bar for a fresh planning agent",
       "Use guto-review to reconstruct context and review a verified change for merge readiness"
     ]
   }

@@ -6,8 +6,8 @@
   "plugins": [
     {
       "name": "guto-skills",
-      "version": "0.2.0",
-      "description": "Four phase-scoped engineering orchestrators with vendored Agent Skills.",
+      "version": "0.3.0",
+      "description": "Four composable engineering graph nodes with Gauntlet pre-planning and vendored Agent Skills.",
       "source": {
         "source": "local",
         "path": "./"
