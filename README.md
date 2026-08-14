@@ -6,7 +6,7 @@ Four composable orchestration skills built on a deliberately small, vendored sub
 
 `guto-plan`, `guto-build`, `guto-verify`, and `guto-review` are graph nodes, not lifecycle gates. Any Guto skill may invoke any other Guto skill, including itself, whenever the active objective benefits from it. Callers may form forward paths, feedback loops, fan-in, fan-out, or targeted re-entry; no human approval, status, prior phase, or fixed order is required to cross an edge.
 
-The caller owns the loop policy: it chooses the objective, exit condition, iteration budget, and evidence to retain. A Guto skill returns a useful state snapshot but never forces a stop or a next action. The skills may load any vendored skill that is relevant to their current node; listed skills are capabilities, not an allowlist or required sequence.
+The caller owns the loop policy: it chooses the objective, exit condition, iteration budget, and evidence to retain. A Guto skill returns a compact `GRAPH_HANDOFF`. When automatic orchestration is active, it invokes the selected next skill immediately instead of stopping at a textual recommendation. The skills may load any vendored skill that is relevant to their current node; listed skills are capabilities, not an allowlist or required sequence.
 
 Each node keeps its natural responsibility:
 
@@ -16,6 +16,18 @@ Each node keeps its natural responsibility:
 - `guto-review` independently evaluates the current artifact and can route directly to any node.
 
 This preserves useful evidence while allowing flows such as `plan → build → verify → build → verify → review → plan`, direct `review → build`, and concurrent branches that later join at `verify` or `review`.
+
+A caller may implement the Gauntlet-Guto three-cycle policy without changing these nodes:
+
+```text
+Cycle 1  idea-refine ↔ interview-me/clarification-plan → MetaPrompt
+Cycle 2  fresh agent → clarification-plan ↔ planning-and-task-breakdown → plan review
+Cycle 3  guto-build → guto-verify → guto-review
+                           ↑              │
+                           └── blockers ──┘     non-blockers → backlog
+```
+
+The first two cycles may keep explicit human handoffs. Once Cycle 3 is activated, the graph crosses ordinary Guto edges automatically until its evidence-based exit condition, pause, or authority boundary is reached.
 
 ## Context Engineering and Codebase Exploration
 
@@ -139,22 +151,22 @@ codex plugin add guto-skills@guto-skills
 ## Invoke
 
 ```text
-@guto-plan
+$guto-plan
 Model this change, then call any Guto node that advances the objective.
 ```
 
 ```text
-@guto-build
+$guto-build
 Implement the current slice, then route to the most useful Guto node.
 ```
 
 ```text
-@guto-verify
+$guto-verify
 Refresh the evidence for the current artifact and route failures or gaps directly.
 ```
 
 ```text
-@guto-review
+$guto-review
 Review the current artifact and route findings to any Guto node.
 ```
 

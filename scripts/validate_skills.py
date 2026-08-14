@@ -208,6 +208,18 @@ def validate_orchestrators(errors: list[str], custom_only: bool) -> None:
                 f"missing {missing_nodes}"
             )
 
+        lower = text.lower()
+        for phrase in (
+            "graph_handoff",
+            "do not stop after suggesting the edge",
+            "invoke the selected skill now",
+        ):
+            if phrase not in lower:
+                errors.append(
+                    f"{orchestrator} does not implement automatic graph traversal: "
+                    f"missing {phrase!r}"
+                )
+
         if not custom_only:
             for name in links:
                 sibling = SKILLS_DIR / name / "SKILL.md"
