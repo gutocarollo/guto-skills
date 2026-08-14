@@ -6,7 +6,7 @@ Four composable orchestration skills built on a deliberately small, vendored sub
 
 `guto-plan`, `guto-build`, `guto-verify`, and `guto-review` are graph nodes, not lifecycle gates. Any Guto skill may invoke any other Guto skill, including itself, whenever the active objective benefits from it. Callers may form forward paths, feedback loops, fan-in, fan-out, or targeted re-entry; no human approval, status, prior phase, or fixed order is required to cross an edge.
 
-The caller owns the loop policy: it chooses the objective, exit condition, iteration budget, and evidence to retain. A Guto skill returns a useful state snapshot but never forces a stop or a next action. The skills may load any vendored skill that is relevant to their current node; listed skills are capabilities, not an allowlist or required sequence.
+The caller owns the loop policy: it chooses the objective, exit condition, iteration budget, and evidence to retain. A Guto skill returns a compact `GRAPH_HANDOFF`. When automatic orchestration is active, it invokes the selected next skill immediately instead of stopping at a textual recommendation. The skills may load any vendored skill that is relevant to their current node; listed skills are capabilities, not an allowlist or required sequence.
 
 Each node keeps its natural responsibility:
 
@@ -16,6 +16,31 @@ Each node keeps its natural responsibility:
 - `guto-review` independently evaluates the current artifact and can route directly to any node.
 
 This preserves useful evidence while allowing flows such as `plan → build → verify → build → verify → review → plan`, direct `review → build`, and concurrent branches that later join at `verify` or `review`.
+
+## Gauntlet Pre-Plan
+
+A Gauntlet Loop starts before executable planning. `guto-plan` receives the goal plus optional references, selects the strongest concrete quality bar that an agent can inspect, and emits a compact pre-plan artifact containing:
+
+- `GOAL` — the original objective without weakening its success condition.
+- `REFERENCE_LOCATORS` — every supplied or discovered reference that remains relevant, including those not selected as the primary bar.
+- `QUALITY_BAR` — one sentence naming the inspectable reference or measurement and its win rule, such as blind preference over the reference or `p95 <= 200 ms`.
+- `GAUNTLET_RUN_PROMPT` — a short prompt for a fresh Claude Code or Codex lead agent that carries the goal, bar, and relevant reference locators.
+
+The generated prompt is not the plan. It is the input that gives rise to the plan in a fresh context. The new lead agent chooses the approach and decomposition, writes the executable plan, maintains a simple live progress page, and orchestrates builder/critic loops against the bar. The pre-plan artifact should use the target project's planning convention; otherwise persist it at `tasks/gauntlet.md` and pass it by reference in `GRAPH_HANDOFF`.
+
+One non-normative arrangement is:
+
+```text
+Cycle 1  GOAL + optional references → guto-plan pre-plan → QUALITY_BAR + GAUNTLET_RUN_PROMPT
+Cycle 2  fresh agent + generated prompt → clarification-plan ↔ planning-and-task-breakdown → plan
+Cycle 3  lead-selected Guto graph → inspect real output against the bar → next best edge
+```
+
+The diagram is an example, not a lifecycle contract. The lead or caller may skip, reorder, branch, join, or re-enter any Guto node after planning; there is no required `build → verify → review` sequence.
+
+For each important piece that can be improved and judged independently, the lead agent fans out a builder and a separate critic with fresh context. The critic inspects the real artifact, compares it directly with the bar, uses blind A/B comparison when possible, returns the largest remaining gap, and repeats until the output wins or the caller stops the run. Coupled pieces stay under a sequential owner until they can be judged independently; fan-out is a tool, not a quota.
+
+`context_policy: fresh` is an execution instruction to the external caller or runtime. It is the only exception to inline graph traversal: dispatch the selected node in a new context and pass the artifact reference instead of continuing in the current conversation. If the runtime cannot create a fresh context, it must say so rather than claiming independent review.
 
 ## Context Engineering and Codebase Exploration
 
@@ -99,6 +124,7 @@ Use the target project's existing planning convention when it has one. Otherwise
 
 ```text
 tasks/
+├── gauntlet.md # optional pre-plan quality bar and generated runner prompt
 ├── plan.md   # approved, versioned planning contract
 ├── todo.md   # checkboxes and evidence-backed progress
 └── state.md  # short anti-drift state for session changes or compaction
@@ -139,22 +165,22 @@ codex plugin add guto-skills@guto-skills
 ## Invoke
 
 ```text
-@guto-plan
+$guto-plan
 Model this change, then call any Guto node that advances the objective.
 ```
 
 ```text
-@guto-build
+$guto-build
 Implement the current slice, then route to the most useful Guto node.
 ```
 
 ```text
-@guto-verify
+$guto-verify
 Refresh the evidence for the current artifact and route failures or gaps directly.
 ```
 
 ```text
-@guto-review
+$guto-review
 Review the current artifact and route findings to any Guto node.
 ```
 

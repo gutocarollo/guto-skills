@@ -20,6 +20,12 @@ This node may invoke any local Guto node in any order, including re-entry:
 
 It may also load any relevant vendored skill. There is no prerequisite Build status, read-only gate around the graph, required child set, fixed order, or mandatory stop before Review. Before invoking a local skill, read its complete `SKILL.md`.
 
+Common verification capabilities include:
+
+- [`context-engineering`](../context-engineering/SKILL.md)
+- [`browser-testing-with-devtools`](../browser-testing-with-devtools/SKILL.md)
+- [`debugging-and-error-recovery`](../debugging-and-error-recovery/SKILL.md)
+
 ## Work
 
 1. Identify the claims, expected results, and current artifact state.
@@ -30,4 +36,4 @@ It may also load any relevant vendored skill. There is no prerequisite Build sta
 
 ## Output
 
-Return a claim-to-evidence snapshot, unproved claims, diagnosed discrepancies, and suggested graph edges. The caller decides whether evidence is sufficient and whether to continue.
+Return a compact `GRAPH_HANDOFF`: claim-to-evidence snapshot, unproved claims, diagnosed discrepancies, selected next node, and exit condition. When automatic orchestration is active and the exit condition is not met, do not stop after suggesting the edge: read and invoke the selected skill now. The caller decides the evidence threshold and loop budget.

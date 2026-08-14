@@ -20,6 +20,14 @@ This node may invoke any local Guto node in any order, including re-entry:
 
 It may also load any relevant vendored skill. There is no prerequisite verification status, read-only return path, required child set, fixed order, approval checkpoint, or terminal merge status. Before invoking a local skill, read its complete `SKILL.md`.
 
+Common review capabilities include:
+
+- [`context-engineering`](../context-engineering/SKILL.md)
+- [`code-review-and-quality`](../code-review-and-quality/SKILL.md)
+- [`code-simplification`](../code-simplification/SKILL.md)
+- [`security-and-hardening`](../security-and-hardening/SKILL.md)
+- [`performance-optimization`](../performance-optimization/SKILL.md)
+
 ## Work
 
 1. Reconstruct enough context to challenge the current artifact rather than trusting prior summaries.
@@ -30,4 +38,4 @@ It may also load any relevant vendored skill. There is no prerequisite verificat
 
 ## Output
 
-Return the context gaps, findings, evidence quality, unresolved risk, and suggested graph edges. The caller decides disposition, looping, and final release actions.
+Return a compact `GRAPH_HANDOFF`: context gaps, findings with severity, evidence quality, unresolved risk, selected next node, and exit condition. When automatic orchestration is active and the exit condition is not met, do not stop after suggesting the edge: read and invoke the selected skill now. The caller decides disposition, looping, and release actions.

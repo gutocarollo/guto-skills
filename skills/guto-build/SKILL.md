@@ -20,6 +20,13 @@ This node may invoke any local Guto node in any order, including re-entry:
 
 It may also load any relevant vendored skill. There is no allowlist, required ordering, approval checkpoint, or mandatory stop before another Guto node. Before invoking a local skill, read its complete `SKILL.md`.
 
+Common implementation capabilities include:
+
+- [`context-engineering`](../context-engineering/SKILL.md)
+- [`source-driven-development`](../source-driven-development/SKILL.md)
+- [`incremental-implementation`](../incremental-implementation/SKILL.md)
+- [`debugging-and-error-recovery`](../debugging-and-error-recovery/SKILL.md)
+
 ## Work
 
 1. Identify the active objective, current artifact, and smallest useful mutation.
@@ -30,4 +37,4 @@ It may also load any relevant vendored skill. There is no allowlist, required or
 
 ## Output
 
-Return the mutation summary, affected paths, current evidence, failures or open risks, and a suggested next graph edge. The caller controls continuation and loop budget.
+Return a compact `GRAPH_HANDOFF`: mutation summary, affected paths, current evidence, failures or open risks, selected next node, and exit condition. When automatic orchestration is active and the exit condition is not met, do not stop after suggesting the edge: read and invoke the selected skill now. The caller controls loop policy and budget.

@@ -1,7 +1,7 @@
 {
   "name": "guto-skills",
-  "version": "0.2.0",
-  "description": "Phase-scoped planning, build, verification, and review orchestration with mandatory context engineering and vendored Agent Skills.",
+  "version": "0.3.0",
+  "description": "Composable planning, build, verification, and review graph nodes with Gauntlet pre-planning and vendored Agent Skills.",
   "author": {
     "name": "Augusto Carollo"
   },
